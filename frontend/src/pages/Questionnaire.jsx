@@ -1,180 +1,216 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ArrowLeft, ChevronRight, Brain, Wind, AlertCircle, Zap, Layers, Snowflake, Droplets, MapPin } from 'lucide-react';
 
 const SYMPTOMS = [
-  { id: 'headache', label: 'Headache' },
-  { id: 'cough', label: 'Cough' },
-  { id: 'vomiting', label: 'Vomiting' },
-  { id: 'myalgia', label: 'Muscle Pain' },
-  { id: 'rash', label: 'Rash' },
-  { id: 'rigors', label: 'Chills' },
-  { id: 'sweating', label: 'Sweating' },
-  { id: 'travel_history', label: 'Recent Travel' }
+  { id: 'headache', icon: Brain, question: 'How severe is your headache?', description: 'Include any throbbing, pressure, or location-specific pain' },
+  { id: 'cough', icon: Wind, question: 'How severe is your cough?', description: 'Include dry cough, wet cough, or persistent coughing fits' },
+  { id: 'vomiting', icon: AlertCircle, question: 'Have you experienced vomiting or nausea?', description: 'Include frequency and intensity' },
+  { id: 'myalgia', icon: Zap, question: 'Are you experiencing body or muscle pain?', description: 'Include joint pain, body aches, or generalized soreness' },
+  { id: 'rash', icon: Layers, question: 'Have you noticed skin rash or red spots?', description: 'Include any unusual skin changes, spots, or irritation' },
+  { id: 'rigors', icon: Snowflake, question: 'Have you experienced chills or shivering?', description: 'Include sudden cold feelings despite high temperature' },
+  { id: 'sweating', icon: Droplets, question: 'Are you experiencing unusual sweating?', description: 'Include night sweats or excessive perspiration' },
+];
+
+const SEVERITY_OPTIONS = [
+  { label: 'None', value: 0, chipClass: 'chip-unselected' },
+  { label: 'Mild', value: 1, selectedClass: 'chip-mild-selected' },
+  { label: 'Moderate', value: 2, selectedClass: 'chip-moderate-selected' },
+  { label: 'Severe', value: 3, selectedClass: 'chip-severe-selected' },
+];
+
+const TRAVEL_OPTIONS = [
+  { label: 'No Travel', value: 0 },
+  { label: 'Nearby', value: 1 },
+  { label: 'Intercity', value: 2 },
+  { label: 'International', value: 3 },
+];
+
+const FEVER_OPTIONS = [
+  { label: '< 1 Day', value: 0 },
+  { label: '1–3 Days', value: 1 },
+  { label: '4–7 Days', value: 2 },
+  { label: '> 7 Days', value: 3 },
 ];
 
 export default function Questionnaire() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const { state } = useLocation();
+  const medicalHistory = state?.medicalHistory || {};
+
+  const [step, setStep] = useState(1); // 1 = basic info, 2 = symptoms
   const [formData, setFormData] = useState({
-    history: '',
     age: '',
-    gender: 'Other',
-    fever_duration: '0',
-    symptoms: SYMPTOMS.reduce((acc, s) => ({ ...acc, [s.id]: 'None' }), {})
+    gender: 'Male',
+    fever_duration: 0,
+    symptoms: SYMPTOMS.reduce((acc, s) => ({ ...acc, [s.id]: 0 }), {}),
+    travel_history: 0,
   });
 
-  const updateForm = (key, value) => setFormData(f => ({ ...f, [key]: value }));
-  const updateSymptom = (id, value) => setFormData(f => ({
-    ...f,
-    symptoms: { ...f.symptoms, [id]: value }
-  }));
+  const updateSymptom = (id, val) => setFormData(f => ({ ...f, symptoms: { ...f.symptoms, [id]: val } }));
 
-  const handleNext = () => setStep(s => Math.min(3, s + 1));
-  const handleBack = () => setStep(s => Math.max(1, s - 1));
+  const handleContinue = () => {
+    if (step === 1) {
+      setStep(2);
+    } else {
+      navigate('/scan/hardware', { state: { medicalHistory, questionnaire: formData } });
+    }
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Navigate to results or processing page, passing data
-    navigate('/sensor', { state: { questionnaire: formData } });
+  const getChipClass = (currentVal, optionVal, option) => {
+    if (currentVal === optionVal) {
+      if (optionVal === 0) return 'chip chip-selected';
+      return `chip ${option.selectedClass || 'chip-selected'}`;
+    }
+    return 'chip chip-unselected';
   };
 
   return (
-    <div className="pb-20">
+    <div className="pb-8">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => step > 1 ? handleBack() : navigate('/')} className="p-2 rounded-full hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5" />
+        <button onClick={() => step > 1 ? setStep(1) : navigate(-1)} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+          <ArrowLeft size={18} color="#64748B" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Health Assessment</h1>
-          <p className="text-xs text-gray-500">Step {step} of 3</p>
+          <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>Symptom Assessment</h1>
+          <p className="text-sm" style={{ color: '#64748B' }}>Step 2 of 4 · {step === 1 ? 'Basic Information' : 'Current Symptoms'}</p>
         </div>
       </div>
 
-      <div className="w-full bg-gray-200 h-2 rounded-full mb-8 overflow-hidden">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${(step / 3) * 100}%` }}
-          className="h-full bg-gray-900 rounded-full"
-        />
+      <div className="step-progress mb-8">
+        <div className="step-progress-fill" style={{ width: '50%' }} />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {step === 1 && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-lg font-semibold mb-4">Section 1: Basic Information</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                <input 
-                  type="number" 
-                  required
-                  value={formData.age}
-                  onChange={e => updateForm('age', e.target.value)}
-                  className="input-field" 
-                  placeholder="e.g. 30"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                <select 
-                  value={formData.gender}
-                  onChange={e => updateForm('gender', e.target.value)}
-                  className="input-field bg-white"
+      {step === 1 && (
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
+          <h2 className="text-lg font-bold" style={{ color: '#0F172A' }}>Basic Information</h2>
+
+          <div className="card">
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#0F172A' }}>Your Age</label>
+            <input
+              type="number"
+              value={formData.age}
+              onChange={e => setFormData(f => ({ ...f, age: e.target.value }))}
+              className="input-field"
+              placeholder="e.g. 30"
+              required
+            />
+          </div>
+
+          <div className="card">
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#0F172A' }}>Gender</label>
+            <select
+              value={formData.gender}
+              onChange={e => setFormData(f => ({ ...f, gender: e.target.value }))}
+              className="input-field"
+              style={{ background: 'white' }}
+            >
+              <option>Male</option>
+              <option>Female</option>
+              <option>Non-binary</option>
+              <option>Prefer not to say</option>
+            </select>
+          </div>
+
+          <div className="card">
+            <label className="block text-sm font-semibold mb-3" style={{ color: '#0F172A' }}>How long have you had fever?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {FEVER_OPTIONS.map(opt => (
+                <div
+                  key={opt.value}
+                  onClick={() => setFormData(f => ({ ...f, fever_duration: opt.value }))}
+                  className={formData.fever_duration === opt.value ? 'chip chip-selected' : 'chip chip-unselected'}
                 >
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
-                </select>
+                  {opt.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {step === 2 && (
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+          <div>
+            <h2 className="text-lg font-bold" style={{ color: '#0F172A' }}>Current Symptoms</h2>
+            <p className="text-sm mt-1" style={{ color: '#64748B' }}>Select the severity of each symptom you're experiencing</p>
+          </div>
+
+          {SYMPTOMS.map((sym, i) => {
+            const Icon = sym.icon;
+            return (
+              <motion.div
+                key={sym.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08 }}
+                className="card"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#ECFDF5' }}>
+                    <Icon size={18} color="#064E3B" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>{sym.question}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{sym.description}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {SEVERITY_OPTIONS.map(opt => (
+                    <div
+                      key={opt.value}
+                      onClick={() => updateSymptom(sym.id, opt.value)}
+                      className={getChipClass(formData.symptoms[sym.id], opt.value, opt)}
+                    >
+                      {opt.label}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {/* Travel History */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: SYMPTOMS.length * 0.08 }}
+            className="card"
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#ECFDF5' }}>
+                <MapPin size={18} color="#064E3B" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Medical History / Allergies</label>
-                <textarea 
-                  rows="3" 
-                  value={formData.history}
-                  onChange={e => updateForm('history', e.target.value)}
-                  className="input-field resize-none" 
-                  placeholder="List any pre-existing conditions..."
-                />
+                <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>Have you recently traveled to unfamiliar or high-risk areas?</p>
+                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Travel in the past 14 days that may have involved exposure</p>
               </div>
             </div>
-          </motion.div>
-        )}
-
-        {step === 2 && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-lg font-semibold mb-4">Section 2: Primary Complaint</h2>
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">Fever Duration</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: '< 1 day', val: '0' },
-                  { label: '1 - 3 days', val: '2' },
-                  { label: '4 - 7 days', val: '5' },
-                  { label: '7+ days', val: '8' }
-                ].map(opt => (
-                  <div 
-                    key={opt.val}
-                    onClick={() => updateForm('fever_duration', opt.val)}
-                    className={`p-4 rounded-xl border text-center cursor-pointer transition-all ${
-                      formData.fever_duration === opt.val 
-                      ? 'bg-gray-100 border-gray-900 text-gray-900 font-semibold' 
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-900'
-                    }`}
-                  >
-                    {opt.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 3 && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-lg font-semibold mb-4">Section 3: Symptoms</h2>
-            <p className="text-sm text-gray-500 mb-4">Rate the severity of each symptom</p>
-            <div className="space-y-4">
-              {SYMPTOMS.map(sym => (
-                <div key={sym.id} className="card p-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-3">{sym.label}</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['None', 'Mild', 'Moderate', 'Severe'].map(level => (
-                      <div 
-                        key={level}
-                        onClick={() => updateSymptom(sym.id, level)}
-                        className={`py-2 text-xs text-center rounded-lg cursor-pointer transition-colors ${
-                          formData.symptoms[sym.id] === level
-                          ? (level === 'None' ? 'bg-gray-200 text-gray-800' : 
-                             level === 'Mild' ? 'bg-yellow-100 text-yellow-800' : 
-                             level === 'Moderate' ? 'bg-orange-100 text-orange-800' : 
-                             'bg-red-100 text-red-800')
-                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                        }`}
-                      >
-                        {level}
-                      </div>
-                    ))}
-                  </div>
+            <div className="grid grid-cols-2 gap-2">
+              {TRAVEL_OPTIONS.map(opt => (
+                <div
+                  key={opt.value}
+                  onClick={() => setFormData(f => ({ ...f, travel_history: opt.value }))}
+                  className={formData.travel_history === opt.value ? 'chip chip-selected' : 'chip chip-unselected'}
+                >
+                  {opt.label}
                 </div>
               ))}
             </div>
           </motion.div>
-        )}
 
-        <div className="pt-6 border-t border-gray-100 mt-8 flex gap-4">
-          {step < 3 ? (
-            <button type="button" onClick={handleNext} className="btn-primary w-full bg-gray-900 hover:bg-black text-white">
-              Continue <ChevronRight className="w-5 h-5" />
-            </button>
-          ) : (
-            <button type="submit" className="btn-primary w-full bg-gray-900 hover:bg-black text-white">
-              Fetch Sensor Data <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </form>
+          <p className="text-xs" style={{ color: '#94A3B8' }}>
+            ℹ️ Only binary values (0/1) are sent to ML models. Severity scores (0-3) are stored separately for analytics.
+          </p>
+        </motion.div>
+      )}
+
+      <div className="mt-8">
+        <button onClick={handleContinue} className="btn-primary">
+          {step === 1 ? 'Continue to Symptoms' : 'Continue to Sensor Data'} <ChevronRight size={18} />
+        </button>
+      </div>
     </div>
   );
 }

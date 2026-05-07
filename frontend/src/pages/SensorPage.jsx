@@ -40,12 +40,6 @@ export default function SensorPage() {
 
   const submitToAPI = async (sensors, qData) => {
     try {
-      // Map symptoms to 0/1
-      const symptomFlags = {};
-      Object.keys(qData.symptoms).forEach(key => {
-        symptomFlags[key] = qData.symptoms[key] !== 'None' ? 1 : 0;
-      });
-
       const payload = {
         temperature_c: sensors.temperature_c,
         heart_rate: sensors.heart_rate,
@@ -54,7 +48,9 @@ export default function SensorPage() {
         humidity: sensors.humidity,
         age: parseInt(qData.age) || 30,
         fever_days: parseInt(qData.fever_duration) || 0,
-        ...symptomFlags
+        gender: qData.gender,
+        medical_history: qData.history,
+        ...qData.symptoms
       };
 
       const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';

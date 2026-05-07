@@ -33,11 +33,11 @@ warnings.filterwarnings("ignore")
 DS2_PATH = "fever_triage_clinical_6000.csv"   # update path if needed
 DS3_PATH = "fever_dataset_5000.csv"
 
-OUTPUT_MODEL1 = "nidan_risk_model.pkl"
-OUTPUT_MODEL2 = "nidan_pattern_model.pkl"
-OUTPUT_ENCODER1 = "nidan_risk_encoder.pkl"
-OUTPUT_ENCODER2 = "nidan_pattern_encoder.pkl"
-OUTPUT_FEATURES = "nidan_feature_list.pkl"
+OUTPUT_MODEL1 = "models/nidan_risk_model.pkl"
+OUTPUT_MODEL2 = "models/nidan_pattern_model.pkl"
+OUTPUT_ENCODER1 = "models/nidan_risk_encoder.pkl"
+OUTPUT_ENCODER2 = "models/nidan_pattern_encoder.pkl"
+OUTPUT_FEATURES = "models/nidan_feature_list.pkl"
 
 RANDOM_STATE = 42
 

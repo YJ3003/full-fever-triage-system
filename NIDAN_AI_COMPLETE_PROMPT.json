@@ -1,0 +1,1598 @@
+{
+  "project": {
+    "title": "NIDAN-AI",
+    "subtitle": "Portable Multi-Modal AI-Based Fever Triage and Explainable Health Risk Assessment Platform",
+    "version": "2.0",
+    "last_updated": "2026-05-07",
+    "classification": "Production-Grade Healthcare Web Application",
+    "target_feel": "Real healthcare startup product — not a college project, not a chatbot, not a flashy AI demo"
+  },
+
+  "core_objective": {
+    "description": "Build a clean, professional, mobile-first AI-powered healthcare triage platform",
+    "primary_functions": [
+      "Google Sign-In patient authentication with persistent history via Supabase",
+      "Step-by-step guided medical questionnaire flow",
+      "Sensor-based physiological monitoring from ESP32 hardware with manual entry fallback",
+      "Smartphone camera PPG/HRV signal analysis",
+      "Machine learning risk level and infection pattern prediction",
+      "Gemini API as the primary explainability and reasoning layer (hidden, internal only)",
+      "Daily and longitudinal fever trend tracking with interactive charts",
+      "Emergency alert system with threshold-based triggers",
+      "Smart health recommendations based on triage output",
+      "Nearby doctor/clinic discovery filtered by detected fever type"
+    ],
+    "not_a": [
+      "Medical diagnosis system",
+      "Chatbot",
+      "Generic template",
+      "AI demo"
+    ],
+    "is_a": "First-level health triage assistant for pre-clinical symptom assessment"
+  },
+
+  "tech_stack": {
+    "frontend": {
+      "framework": "React.js (Vite)",
+      "styling": "Tailwind CSS v3",
+      "routing": "React Router v6",
+      "http_client": "Axios",
+      "charts": "Recharts",
+      "animations": "Framer Motion",
+      "icons": "Lucide React or Heroicons",
+      "auth_ui": "Supabase Auth UI (Google OAuth provider)",
+      "maps": "Google Maps JavaScript API (for nearby doctors)",
+      "camera_ppg": "MediaDevices API (getUserMedia + canvas)",
+      "state_management": "React Context API + useReducer",
+      "form_handling": "React Hook Form",
+      "notifications": "React Hot Toast",
+      "date_utils": "date-fns"
+    },
+    "backend": {
+      "framework": "FastAPI",
+      "language": "Python 3.11+",
+      "server": "Uvicorn",
+      "auth_verification": "Supabase JWT verification via supabase-py",
+      "ai_reasoning": "Google Gemini API (gemini-1.5-flash, internal only)",
+      "ml_framework": "scikit-learn (Random Forest models)",
+      "hardware_proxy": "FastAPI endpoints acting as relay to ESP32 HTTP server",
+      "env_management": "python-dotenv"
+    },
+    "database": {
+      "provider": "Supabase (PostgreSQL)",
+      "auth": "Supabase Auth — Google OAuth2 Sign-In",
+      "realtime": "Supabase Realtime for live sensor data updates",
+      "storage": "Supabase Storage (for PPG signal data if needed)"
+    },
+    "ml_models": {
+      "model_1": {
+        "name": "Risk Level Predictor",
+        "type": "Random Forest Classifier",
+        "outputs": ["Low", "Moderate", "High", "Critical"]
+      },
+      "model_2": {
+        "name": "Infection Pattern Predictor",
+        "type": "Random Forest Classifier",
+        "outputs": ["Viral-like", "Bacterial-like", "Respiratory-risk", "Heat-stress risk", "Malaria-like", "Typhoid-like", "Normal Viral Fever"]
+      }
+    },
+    "hardware": {
+      "microcontroller": "ESP32",
+      "sensors": {
+        "temperature": "MLX90614 (non-contact IR thermometer)",
+        "spo2_hr": "MAX30102 (pulse oximeter + heart rate)",
+        "humidity": "DHT11 or DHT22 (ambient humidity)"
+      },
+      "ppg_source": "Smartphone rear camera (MediaDevices API)",
+      "data_flow": "Sensors → ESP32 → WiFi → FastAPI → Supabase → React Dashboard"
+    }
+  },
+
+  "ui_design_system": {
+    "overall_aesthetic": {
+      "direction": "Refined medical minimalism — like the reference app images provided",
+      "feel": "Premium healthcare app (think: Apple Health meets clinical dashboard)",
+      "inspiration": "The reference image shows white cards, navy/dark-blue CTAs, soft shadows, real doctor photos, clean date pickers, pill-shaped time selectors, bottom navigation bar",
+      "vibe": "Trustworthy, calm, modern, clinical, human"
+    },
+    "strictly_avoid": [
+      "Purple colors",
+      "Neon gradients",
+      "Cyberpunk or sci-fi aesthetic",
+      "Overloaded dashboards",
+      "Generic AI dashboard look",
+      "Bright orange or red backgrounds",
+      "Heavy glassmorphism",
+      "Dark mode as primary (light mode first)",
+      "Comic Sans or decorative fonts"
+    ],
+    "color_palette": {
+      "primary_background": "#FFFFFF",
+      "secondary_background": "#F4F7FB",
+      "card_background": "#FFFFFF with box-shadow: 0 2px 12px rgba(0,0,0,0.06)",
+      "primary_accent": "#1B4FD8 (medical navy blue — matches reference image CTAs)",
+      "secondary_accent": "#0EA5E9 (sky blue / cyan highlights)",
+      "teal_accent": "#0D9488",
+      "success_green": "#16A34A",
+      "warning_amber": "#D97706",
+      "danger_red": "#DC2626",
+      "text_primary": "#0F172A",
+      "text_secondary": "#64748B",
+      "text_muted": "#94A3B8",
+      "border_color": "#E2E8F0",
+      "selected_chip": "#1B4FD8 with white text",
+      "unselected_chip": "#F1F5F9 with #64748B text"
+    },
+    "typography": {
+      "primary_font": "DM Sans (Google Fonts) — clean, modern, medical",
+      "secondary_font": "Inter for data/numbers",
+      "display_font": "Sora for headings",
+      "font_sizes": {
+        "h1": "28px / 700",
+        "h2": "22px / 600",
+        "h3": "18px / 600",
+        "body": "15px / 400",
+        "caption": "12px / 400",
+        "label": "13px / 500"
+      }
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "card_padding": "20px",
+      "section_gap": "24px",
+      "bottom_nav_height": "72px"
+    },
+    "border_radius": {
+      "card": "16px",
+      "button": "12px",
+      "chip": "999px (fully rounded)",
+      "input": "10px",
+      "avatar": "999px"
+    },
+    "shadows": {
+      "card": "0 2px 16px rgba(0,0,0,0.07)",
+      "button": "0 4px 14px rgba(27,79,216,0.25)",
+      "alert": "0 4px 20px rgba(220,38,38,0.2)"
+    },
+    "animations": {
+      "page_transition": "Framer Motion fade + slide up (duration 0.3s)",
+      "card_entry": "staggered fade-in from bottom (delay: 0.1s per card)",
+      "health_meter": "animated progress bar fill on mount",
+      "pulse_indicator": "CSS keyframe ping animation on critical alerts",
+      "chart_entry": "Recharts animationBegin=0 animationDuration=800",
+      "loading_skeleton": "shimmer gradient animation"
+    },
+    "mobile_first": {
+      "breakpoints": {
+        "mobile": "max-width: 640px (primary target)",
+        "tablet": "641px - 1024px",
+        "desktop": "1025px+"
+      },
+      "bottom_navigation": "Fixed bottom nav bar on mobile (Home, Scan, Reports, Profile)",
+      "top_bar": "Sticky header with greeting and notification bell (matches reference)",
+      "safe_area": "padding-bottom: env(safe-area-inset-bottom) for iOS"
+    }
+  },
+
+  "navigation_structure": {
+    "public_routes": [
+      "/",
+      "/login",
+      "/register"
+    ],
+    "protected_patient_routes": [
+      "/dashboard",
+      "/scan/medical-history",
+      "/scan/questionnaire",
+      "/scan/hardware",
+      "/scan/ppg",
+      "/scan/results",
+      "/reports",
+      "/trends",
+      "/nearby-doctors",
+      "/profile"
+    ],
+    "protected_doctor_routes": [
+      "/doctor/dashboard",
+      "/doctor/patients",
+      "/doctor/patient/:id",
+      "/doctor/reports"
+    ],
+    "bottom_nav_items_patient": [
+      { "label": "Home", "icon": "Home", "route": "/dashboard" },
+      { "label": "New Scan", "icon": "ActivitySquare", "route": "/scan/medical-history" },
+      { "label": "Reports", "icon": "BarChart2", "route": "/trends" },
+      { "label": "Profile", "icon": "User", "route": "/profile" }
+    ]
+  },
+
+  "authentication": {
+    "provider": "Supabase Auth",
+    "patient_auth": {
+      "method": "Google OAuth2 Sign-In (primary)",
+      "fallback": "Email + Password (secondary)",
+      "flow": [
+        "User lands on /login",
+        "Clicks 'Continue with Google' button",
+        "Supabase handles OAuth redirect",
+        "On success, Supabase session is established",
+        "JWT stored in Supabase session (auto-managed)",
+        "Frontend reads session from supabase.auth.getSession()",
+        "User redirected to /dashboard"
+      ],
+      "persistence": "Supabase auto-persists session in localStorage",
+      "profile_creation": "On first Google login, insert row into public.patients table with google sub, name, email, avatar_url"
+    },
+    "doctor_auth": {
+      "method": "Email + Password (no Google for doctors)",
+      "extra_fields": ["specialty", "license_number", "hospital_name"]
+    },
+    "role_detection": {
+      "mechanism": "user_metadata.role field set on registration",
+      "values": ["patient", "doctor"],
+      "routing": "On login, check role → redirect to /dashboard or /doctor/dashboard"
+    }
+  },
+
+  "supabase_schema": {
+    "tables": {
+      "patients": {
+        "id": "uuid DEFAULT auth.uid() PRIMARY KEY",
+        "google_sub": "text UNIQUE",
+        "full_name": "text",
+        "email": "text UNIQUE NOT NULL",
+        "avatar_url": "text",
+        "age": "integer",
+        "gender": "text",
+        "blood_group": "text",
+        "created_at": "timestamptz DEFAULT now()",
+        "updated_at": "timestamptz DEFAULT now()"
+      },
+      "medical_history": {
+        "id": "uuid DEFAULT gen_random_uuid() PRIMARY KEY",
+        "patient_id": "uuid REFERENCES patients(id) ON DELETE CASCADE",
+        "conditions": "text (free text: diabetes, asthma, etc.)",
+        "allergies": "text",
+        "current_medications": "text",
+        "past_surgeries": "text",
+        "family_history": "text",
+        "notes": "text",
+        "created_at": "timestamptz DEFAULT now()",
+        "updated_at": "timestamptz DEFAULT now()"
+      },
+      "scans": {
+        "id": "uuid DEFAULT gen_random_uuid() PRIMARY KEY",
+        "patient_id": "uuid REFERENCES patients(id) ON DELETE CASCADE",
+        "scan_timestamp": "timestamptz DEFAULT now()",
+        "age_at_scan": "integer",
+        "gender": "text",
+        "fever_duration": "integer (mapped: 0=<1day, 1=1-3days, 2=4-7days, 3=>7days)",
+        "fever_duration_label": "text",
+        "headache_binary": "integer (0 or 1)",
+        "headache_severity": "integer (0-3)",
+        "cough_binary": "integer",
+        "cough_severity": "integer",
+        "vomiting_binary": "integer",
+        "vomiting_severity": "integer",
+        "muscle_pain_binary": "integer",
+        "muscle_pain_severity": "integer",
+        "rash_binary": "integer",
+        "rash_severity": "integer",
+        "chills_binary": "integer",
+        "chills_severity": "integer",
+        "sweating_binary": "integer",
+        "sweating_severity": "integer",
+        "travel_history_binary": "integer",
+        "travel_history_label": "text",
+        "temperature_c": "numeric",
+        "spo2_percent": "numeric",
+        "humidity_percent": "numeric",
+        "heart_rate_bpm": "numeric",
+        "hrv_ms": "numeric (from PPG)",
+        "ppg_raw_signal": "jsonb (array of intensity values)",
+        "hardware_source": "text ('esp32' or 'manual')",
+        "symptom_burden_score": "integer",
+        "symptom_burden_label": "text",
+        "risk_level": "text (Low/Moderate/High/Critical)",
+        "risk_level_confidence": "numeric",
+        "infection_patterns": "jsonb (array of {pattern, probability})",
+        "primary_infection_pattern": "text",
+        "ai_reasoning": "text (from Gemini, hidden)",
+        "ai_recommendations": "jsonb (array of strings)",
+        "alerts_triggered": "jsonb (array of alert objects)",
+        "created_at": "timestamptz DEFAULT now()"
+      },
+      "daily_trends": {
+        "id": "uuid DEFAULT gen_random_uuid() PRIMARY KEY",
+        "patient_id": "uuid REFERENCES patients(id) ON DELETE CASCADE",
+        "date": "date NOT NULL",
+        "avg_temperature": "numeric",
+        "avg_spo2": "numeric",
+        "avg_heart_rate": "numeric",
+        "avg_hrv": "numeric",
+        "symptom_burden_score": "integer",
+        "scan_count": "integer",
+        "risk_level": "text",
+        "UNIQUE": "(patient_id, date)"
+      },
+      "doctors": {
+        "id": "uuid DEFAULT auth.uid() PRIMARY KEY",
+        "full_name": "text",
+        "email": "text UNIQUE NOT NULL",
+        "specialty": "text",
+        "license_number": "text UNIQUE",
+        "hospital_name": "text",
+        "profile_image_url": "text",
+        "verified": "boolean DEFAULT false",
+        "created_at": "timestamptz DEFAULT now()"
+      },
+      "nearby_doctor_results": {
+        "id": "uuid DEFAULT gen_random_uuid() PRIMARY KEY",
+        "scan_id": "uuid REFERENCES scans(id) ON DELETE CASCADE",
+        "patient_id": "uuid REFERENCES patients(id) ON DELETE CASCADE",
+        "fever_type": "text",
+        "recommended_specialties": "jsonb",
+        "created_at": "timestamptz DEFAULT now()"
+      }
+    },
+    "row_level_security": {
+      "patients": "Patient can only read/write own row",
+      "medical_history": "Patient can only read/write own medical history",
+      "scans": "Patient can read own scans; doctors can read scans of their patients",
+      "daily_trends": "Patient can only read own trends",
+      "doctors": "Doctors can read/write own row; patients can read verified doctors"
+    },
+    "supabase_realtime": {
+      "enabled_tables": ["scans", "daily_trends"],
+      "use_case": "Live dashboard updates when ESP32 pushes new sensor data"
+    }
+  },
+
+  "user_flow": {
+    "complete_scan_flow": [
+      {
+        "step": 1,
+        "screen": "Landing / Login",
+        "description": "Patient opens app, sees clean medical landing page with NIDAN-AI branding",
+        "actions": ["Click 'Continue with Google'", "Google OAuth popup or redirect", "Auto-redirect to dashboard on success"]
+      },
+      {
+        "step": 2,
+        "screen": "Dashboard (Home)",
+        "description": "Personalized greeting with first name, last scan summary, quick action card to start new scan",
+        "shows": ["Last risk level", "Last temperature", "Last SpO2", "Days since last scan", "Start New Scan CTA button"]
+      },
+      {
+        "step": 3,
+        "screen": "Medical History Form",
+        "route": "/scan/medical-history",
+        "description": "Full-page form for medical background — saved to Supabase medical_history table",
+        "fields": [
+          "Existing medical conditions (large textarea with placeholder examples)",
+          "Known allergies",
+          "Current medications",
+          "Past surgeries or hospitalizations",
+          "Family medical history",
+          "Additional notes"
+        ],
+        "behavior": "If patient already has saved medical history, pre-populate fields. Allow update.",
+        "next_action": "Continue to Questionnaire"
+      },
+      {
+        "step": 4,
+        "screen": "Symptom Questionnaire",
+        "route": "/scan/questionnaire",
+        "description": "Multi-section symptom collection — clean pill-chip selector UI per symptom",
+        "sections": ["Basic Info", "Symptom Assessment"],
+        "next_action": "Continue to Hardware Data"
+      },
+      {
+        "step": 5,
+        "screen": "Hardware Data Collection",
+        "route": "/scan/hardware",
+        "description": "Fetch live sensor data from ESP32 OR manually enter values",
+        "modes": {
+          "fetch_from_hardware": {
+            "description": "Button triggers GET request to ESP32 endpoint",
+            "endpoint_placeholder": "VITE_ESP32_ENDPOINT",
+            "fetches": ["temperature_c", "spo2_percent", "humidity_percent", "heart_rate_bpm"],
+            "ui": "Loading spinner → animated card reveal with live values",
+            "error_handling": "If fetch fails, auto-switch to manual entry with toast notification"
+          },
+          "manual_entry": {
+            "description": "User manually inputs all sensor values",
+            "fields": [
+              { "field": "Body Temperature", "unit": "°C or °F toggle", "type": "number", "range": "35.0 - 42.0°C" },
+              { "field": "SpO2", "unit": "%", "type": "number", "range": "70 - 100%" },
+              { "field": "Ambient Humidity", "unit": "%", "type": "number", "range": "0 - 100%" },
+              { "field": "Heart Rate", "unit": "bpm", "type": "number", "range": "40 - 200 bpm" }
+            ],
+            "validation": "Real-time range validation with color-coded feedback (green=normal, amber=borderline, red=abnormal)"
+          }
+        },
+        "toggle_ui": "Tab switcher at top: [📡 Fetch from Device] [✏️ Enter Manually]",
+        "next_action": "Continue to PPG Scan"
+      },
+      {
+        "step": 6,
+        "screen": "Camera PPG Scan",
+        "route": "/scan/ppg",
+        "description": "Optional but encouraged step — camera-based pulse and HRV proxy analysis",
+        "ui_flow": [
+          "Instruction card: 'Place your fingertip firmly over the rear camera lens'",
+          "Permission request for camera access",
+          "Flash/torch activation attempt",
+          "60-second countdown timer with animated ring",
+          "Live intensity graph updating in real-time (Recharts LineChart)",
+          "On complete: HRV proxy calculated and shown",
+          "Skip option available (clearly labeled as optional)"
+        ],
+        "ppg_processing": {
+          "method": "Capture video frames → extract green channel pixel average → analyze peak intervals → compute HRV proxy (RMSSD approximation)",
+          "output_fields": ["hrv_ms (HRV proxy in milliseconds)", "ppg_raw_signal (array of intensity values over time)", "estimated_heart_rate_from_ppg"],
+          "storage": "Stored in scans table as jsonb"
+        },
+        "next_action": "Run Analysis"
+      },
+      {
+        "step": 7,
+        "screen": "Analysis / Processing",
+        "description": "Backend processing screen — animated loading states",
+        "stages_shown": [
+          "Sending data securely...",
+          "Running risk analysis...",
+          "Generating health insights...",
+          "Preparing your report..."
+        ],
+        "backend_actions": [
+          "FastAPI receives all collected data",
+          "ML Model 1 → Risk Level prediction",
+          "ML Model 2 → Infection Pattern prediction",
+          "Gemini API → Generate explainable reasoning + recommendations (internal only)",
+          "Save scan to Supabase scans table",
+          "Update daily_trends table (upsert)",
+          "Return structured result JSON to frontend"
+        ]
+      },
+      {
+        "step": 8,
+        "screen": "Results Dashboard",
+        "route": "/scan/results",
+        "description": "Complete triage output — the most important page",
+        "sections": "See RESULTS_SCREEN section below",
+        "next_actions": ["View Nearby Doctors", "View My Trends", "Share Report", "New Scan"]
+      }
+    ]
+  },
+
+  "screens": {
+    "login_screen": {
+      "route": "/login",
+      "layout": "Full-screen centered layout, light blue-tinted background",
+      "elements": [
+        "NIDAN-AI logo + tagline: 'Smart Health Triage, Powered by AI'",
+        "Large 'Continue with Google' button (white pill with Google icon) — primary CTA",
+        "Divider with 'or'",
+        "Email + Password fields (for patients who registered manually)",
+        "Sign In button",
+        "Link: 'New patient? Create account'",
+        "Link: 'Are you a doctor? Doctor Login'"
+      ],
+      "design_notes": "No heavy background image — soft gradient mesh in teal/blue tones. Google button must look exactly like official Google sign-in button style."
+    },
+
+    "register_screen": {
+      "route": "/register",
+      "note": "Only for manual registration fallback — Google users auto-register",
+      "fields": [
+        { "name": "full_name", "label": "Full Name", "type": "text" },
+        { "name": "email", "label": "Email", "type": "email" },
+        { "name": "password", "label": "Password", "type": "password", "validation": "min 8 chars" },
+        { "name": "confirm_password", "label": "Confirm Password", "type": "password" },
+        { "name": "age", "label": "Age", "type": "number", "range": "1-120" },
+        { "name": "gender", "label": "Gender", "type": "select", "options": ["Male", "Female", "Non-binary", "Prefer not to say"] },
+        { "name": "blood_group", "label": "Blood Group (optional)", "type": "select", "options": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "Unknown"] }
+      ]
+    },
+
+    "dashboard_screen": {
+      "route": "/dashboard",
+      "layout": "Scrollable single-column, mobile-first",
+      "sections": [
+        {
+          "name": "Top Header",
+          "content": [
+            "Left: 'Good [morning/afternoon/evening], [First Name]' greeting",
+            "Right: Notification bell icon with badge count",
+            "Below greeting: 'Here is your health summary'"
+          ]
+        },
+        {
+          "name": "Active Alert Banner",
+          "condition": "If last scan has critical/high alerts",
+          "content": "Red/amber dismissible banner with alert message and 'View Details' button"
+        },
+        {
+          "name": "Last Scan Summary Card",
+          "content": [
+            "Date of last scan",
+            "Risk level badge (color-coded)",
+            "Primary infection pattern label",
+            "Temperature, SpO2, HR in small chips",
+            "'View Full Report' link"
+          ]
+        },
+        {
+          "name": "Quick Stats Row",
+          "layout": "2x2 grid of metric cards (like reference image)",
+          "cards": [
+            { "label": "Temperature", "icon": "Thermometer", "color": "blue" },
+            { "label": "SpO2", "icon": "Droplets", "color": "cyan" },
+            { "label": "Heart Rate", "icon": "Activity", "color": "teal" },
+            { "label": "Risk Level", "icon": "Shield", "color": "dynamic" }
+          ]
+        },
+        {
+          "name": "Start New Scan CTA",
+          "content": "Large full-width navy blue button: '+ Start New Health Scan'",
+          "style": "Navy blue (#1B4FD8) with white text, 14px border-radius, subtle shadow"
+        },
+        {
+          "name": "Mini Trend Chart",
+          "content": "7-day temperature and SpO2 area chart (Recharts)",
+          "link": "View Full Trends →"
+        },
+        {
+          "name": "Recent Scans List",
+          "content": "Last 3 scans as clickable cards showing date, risk level, and fever type"
+        }
+      ]
+    },
+
+    "medical_history_screen": {
+      "route": "/scan/medical-history",
+      "layout": "Scrollable form with sticky progress indicator",
+      "progress": "Step 1 of 4 (pill-style progress bar at top)",
+      "header": "Medical History",
+      "subheader": "This helps us understand your health background",
+      "form_sections": [
+        {
+          "section": "Existing Conditions",
+          "field": "conditions",
+          "type": "textarea",
+          "label": "Do you have any existing medical conditions?",
+          "placeholder": "e.g. Type 2 Diabetes, Asthma, Hypertension, Thyroid disorder, Previous dengue or malaria...",
+          "rows": 4
+        },
+        {
+          "section": "Allergies",
+          "field": "allergies",
+          "type": "textarea",
+          "label": "Any known allergies?",
+          "placeholder": "e.g. Penicillin allergy, Sulfa drugs, Dust allergy, Food allergies...",
+          "rows": 3
+        },
+        {
+          "section": "Current Medications",
+          "field": "current_medications",
+          "type": "textarea",
+          "label": "Are you currently taking any medications?",
+          "placeholder": "e.g. Metformin 500mg twice daily, Salbutamol inhaler, Paracetamol as needed...",
+          "rows": 3
+        },
+        {
+          "section": "Past Medical Events",
+          "field": "past_surgeries",
+          "type": "textarea",
+          "label": "Any past surgeries or hospitalizations?",
+          "placeholder": "e.g. Appendectomy 2019, Hospitalized for dengue fever 2022...",
+          "rows": 3
+        },
+        {
+          "section": "Family History",
+          "field": "family_history",
+          "type": "textarea",
+          "label": "Any relevant family medical history?",
+          "placeholder": "e.g. Father has Type 2 Diabetes, Mother has hypertension...",
+          "rows": 3
+        },
+        {
+          "section": "Additional Notes",
+          "field": "notes",
+          "type": "textarea",
+          "label": "Anything else you'd like us to know?",
+          "placeholder": "e.g. I'm pregnant, I recently donated blood, I'm immunocompromised...",
+          "rows": 3
+        }
+      ],
+      "note": "Medical history is stored separately and is NOT passed to ML models. It is used by Gemini for context-aware reasoning and by the doctor dashboard.",
+      "button": "Continue to Symptoms →"
+    },
+
+    "questionnaire_screen": {
+      "route": "/scan/questionnaire",
+      "layout": "Card-per-symptom, swipeable or scrollable",
+      "progress": "Step 2 of 4",
+      "header": "Symptom Assessment",
+      "section_1_basic_info": {
+        "title": "Basic Information",
+        "fields": [
+          {
+            "field": "age",
+            "label": "Your Age",
+            "type": "number",
+            "note": "Pre-filled from profile if available"
+          },
+          {
+            "field": "gender",
+            "label": "Gender",
+            "type": "select",
+            "options": ["Male", "Female", "Non-binary", "Prefer not to say"]
+          },
+          {
+            "field": "fever_duration",
+            "label": "How long have you had fever?",
+            "type": "pill_selector",
+            "options": [
+              { "label": "< 1 Day", "value": 0 },
+              { "label": "1–3 Days", "value": 1 },
+              { "label": "4–7 Days", "value": 2 },
+              { "label": "> 7 Days", "value": 3 }
+            ]
+          }
+        ]
+      },
+      "section_2_symptoms": {
+        "title": "Current Symptoms",
+        "subtitle": "Select the severity of each symptom you're experiencing",
+        "ui_pattern": "One card per symptom with 4 pill chips horizontally",
+        "chip_options": [
+          { "label": "None", "binary_value": 0, "severity_value": 0, "chip_color": "gray" },
+          { "label": "Mild", "binary_value": 1, "severity_value": 1, "chip_color": "blue" },
+          { "label": "Moderate", "binary_value": 1, "severity_value": 2, "chip_color": "amber" },
+          { "label": "Severe", "binary_value": 1, "severity_value": 3, "chip_color": "red" }
+        ],
+        "symptoms": [
+          {
+            "id": "headache",
+            "icon": "Brain",
+            "question": "How severe is your headache?",
+            "description": "Include any throbbing, pressure, or location-specific pain"
+          },
+          {
+            "id": "cough",
+            "icon": "Wind",
+            "question": "How severe is your cough?",
+            "description": "Include dry cough, wet cough, or persistent coughing fits"
+          },
+          {
+            "id": "vomiting",
+            "icon": "AlertCircle",
+            "question": "Have you experienced vomiting or nausea?",
+            "description": "Include frequency and intensity"
+          },
+          {
+            "id": "muscle_pain",
+            "icon": "Zap",
+            "question": "Are you experiencing body or muscle pain?",
+            "description": "Include joint pain, body aches, or generalized soreness"
+          },
+          {
+            "id": "rash",
+            "icon": "Layers",
+            "question": "Have you noticed skin rash or red spots?",
+            "description": "Include any unusual skin changes, spots, or irritation"
+          },
+          {
+            "id": "chills",
+            "icon": "Snowflake",
+            "question": "Have you experienced chills or shivering?",
+            "description": "Include sudden cold feelings despite high temperature"
+          },
+          {
+            "id": "sweating",
+            "icon": "Droplets",
+            "question": "Are you experiencing unusual sweating?",
+            "description": "Include night sweats or excessive perspiration"
+          },
+          {
+            "id": "travel_history",
+            "icon": "Map",
+            "question": "Have you recently traveled to unfamiliar or high-risk areas?",
+            "description": "Travel in the past 14 days that may have involved exposure",
+            "custom_options": [
+              { "label": "No Travel", "binary_value": 0, "severity_value": 0 },
+              { "label": "Nearby", "binary_value": 1, "severity_value": 1 },
+              { "label": "Intercity", "binary_value": 1, "severity_value": 2 },
+              { "label": "International", "binary_value": 1, "severity_value": 3 }
+            ]
+          }
+        ]
+      },
+      "ml_mapping_note": "Only binary values (0/1) are sent to ML models. Severity scores (0-3) are stored in Supabase for analytics and trend visualization.",
+      "button": "Continue to Sensor Data →"
+    },
+
+    "hardware_screen": {
+      "route": "/scan/hardware",
+      "progress": "Step 3 of 4",
+      "header": "Physiological Data",
+      "subheader": "Collect your vital signs from the device or enter manually",
+      "tab_switcher": {
+        "tab_1": {
+          "label": "📡 Fetch from Device",
+          "description": "Automatically pulls data from your connected ESP32 sensor device"
+        },
+        "tab_2": {
+          "label": "✏️ Manual Entry",
+          "description": "Enter your vital signs manually if device is unavailable"
+        }
+      },
+      "fetch_from_device_ui": {
+        "status_states": {
+          "idle": "Device icon with 'Connect & Fetch Data' button",
+          "connecting": "Pulsing animation: 'Connecting to device...'",
+          "fetching": "Spinner: 'Fetching sensor readings...'",
+          "success": "Green check: animated card reveal of all four values",
+          "error": "Red icon: 'Could not connect. Please enter manually.' — auto-toggle to manual tab"
+        },
+        "endpoint": "VITE_ESP32_ENDPOINT (environment variable)",
+        "retry_button": "Retry Connection",
+        "data_cards_after_fetch": [
+          { "label": "Body Temperature", "value": "from ESP32", "unit": "°C", "icon": "Thermometer" },
+          { "label": "Blood Oxygen (SpO2)", "value": "from ESP32", "unit": "%", "icon": "Droplets" },
+          { "label": "Ambient Humidity", "value": "from ESP32", "unit": "%", "icon": "Wind" },
+          { "label": "Heart Rate", "value": "from ESP32", "unit": "bpm", "icon": "Activity" }
+        ]
+      },
+      "manual_entry_ui": {
+        "fields": [
+          {
+            "field": "temperature_c",
+            "label": "Body Temperature",
+            "type": "number",
+            "step": 0.1,
+            "unit_toggle": ["°C", "°F"],
+            "normal_range": "36.1–37.2°C",
+            "validation": { "min": 35.0, "max": 42.0 },
+            "color_coding": {
+              "normal": "green (36.1–37.2°C)",
+              "mild_fever": "amber (37.3–38.0°C)",
+              "moderate_fever": "orange (38.1–39.0°C)",
+              "high_fever": "red (>39.0°C)"
+            }
+          },
+          {
+            "field": "spo2_percent",
+            "label": "Blood Oxygen Saturation (SpO2)",
+            "type": "number",
+            "step": 0.5,
+            "unit": "%",
+            "normal_range": "95–100%",
+            "validation": { "min": 70, "max": 100 },
+            "color_coding": {
+              "normal": "green (≥95%)",
+              "low_warning": "amber (90–94%)",
+              "critical": "red (<90%)"
+            }
+          },
+          {
+            "field": "humidity_percent",
+            "label": "Ambient Humidity",
+            "type": "number",
+            "step": 1,
+            "unit": "%",
+            "normal_range": "30–60%",
+            "validation": { "min": 0, "max": 100 }
+          },
+          {
+            "field": "heart_rate_bpm",
+            "label": "Heart Rate",
+            "type": "number",
+            "step": 1,
+            "unit": "bpm",
+            "normal_range": "60–100 bpm",
+            "validation": { "min": 30, "max": 220 },
+            "color_coding": {
+              "normal": "green (60–100)",
+              "bradycardia_warning": "amber (<60)",
+              "tachycardia_warning": "amber (100–130)",
+              "critical": "red (>130)"
+            }
+          }
+        ]
+      },
+      "hardware_source_field": "Always record 'esp32' or 'manual' in scans.hardware_source",
+      "button": "Continue to Pulse Scan →"
+    },
+
+    "ppg_screen": {
+      "route": "/scan/ppg",
+      "progress": "Step 4 of 4",
+      "header": "Pulse & HRV Scan",
+      "subheader": "Optional — Place your fingertip on the rear camera",
+      "optional_badge": "Shown as 'OPTIONAL' pill badge in amber",
+      "ui_flow": [
+        {
+          "state": "instructions",
+          "content": [
+            "Animated illustration of finger on camera",
+            "Instruction: 'Place your fingertip firmly over the rear camera lens. Keep still for 60 seconds.'",
+            "Secondary tip: 'Make sure your environment is well-lit or enable flash'",
+            "'Start Pulse Scan' primary button",
+            "'Skip this step →' secondary link"
+          ]
+        },
+        {
+          "state": "permission_request",
+          "content": "Camera permission dialog — custom styled explanation card before browser prompt"
+        },
+        {
+          "state": "scanning",
+          "content": [
+            "Circular countdown timer (60 seconds) with animated ring in teal",
+            "Live intensity waveform below (Recharts LineChart, last 100 samples)",
+            "Text: 'Detecting pulse... Keep your finger steady'",
+            "Pulsing heart icon",
+            "'Stop & Calculate' button (secondary)"
+          ]
+        },
+        {
+          "state": "complete",
+          "content": [
+            "Success animation (checkmark)",
+            "HRV Proxy value card",
+            "Estimated HR from PPG card",
+            "PPG waveform summary chart",
+            "'Continue to Analysis' button"
+          ]
+        },
+        {
+          "state": "error",
+          "content": "Error card with retry or skip option"
+        }
+      ],
+      "technical_implementation": {
+        "api": "navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })",
+        "flash": "ImageCapture API or track.applyConstraints({ advanced: [{ torch: true }] })",
+        "frame_capture": "requestAnimationFrame → drawImage to canvas → getImageData → extract green channel mean",
+        "peak_detection": "Simple sliding window peak detection on green channel signal",
+        "hrv_proxy": "RMSSD approximation from inter-peak intervals",
+        "storage": "Save raw signal array (sampled at ~30fps, 60s = ~1800 points) as jsonb in scans.ppg_raw_signal"
+      }
+    },
+
+    "results_screen": {
+      "route": "/scan/results",
+      "header": "Your Health Report",
+      "subheader": "Based on your symptoms and vitals",
+      "sections": [
+        {
+          "section_number": 1,
+          "name": "Triage Level Card",
+          "description": "The most prominent element on the page — full-width colored banner",
+          "risk_levels": {
+            "Low": { "color": "#16A34A", "bg": "#F0FDF4", "icon": "CheckCircle", "message": "No immediate concern. Continue monitoring." },
+            "Moderate": { "color": "#D97706", "bg": "#FFFBEB", "icon": "AlertTriangle", "message": "Doctor consultation recommended soon." },
+            "High": { "color": "#EA580C", "bg": "#FFF7ED", "icon": "AlertOctagon", "message": "Please consult a doctor within 24 hours." },
+            "Critical": { "color": "#DC2626", "bg": "#FEF2F2", "icon": "Siren", "message": "Seek immediate medical attention." }
+          },
+          "elements": [
+            "Large risk level text",
+            "Severity gauge / radial progress",
+            "Confidence percentage",
+            "Short contextual message"
+          ]
+        },
+        {
+          "section_number": 2,
+          "name": "Infection Pattern Analysis",
+          "description": "Probability bars for each pattern — NO direct disease diagnosis language",
+          "ui": "Horizontal progress bars with pattern name, probability %, confidence level",
+          "disclaimer": "'These patterns are statistical indicators, not medical diagnoses.'",
+          "patterns_displayed": "All patterns from Model 2 output, sorted by probability descending",
+          "chart": "Optional Recharts RadarChart for multi-pattern visualization"
+        },
+        {
+          "section_number": 3,
+          "name": "AI Health Reasoning",
+          "description": "Gemini-generated explainable reasoning — displayed as a professional medical interpretation",
+          "title_shown_to_user": "Health Insights",
+          "gemini_attribution": "NEVER shown — no 'Powered by Gemini', no AI branding",
+          "content_format": [
+            "2-3 paragraph professional medical interpretation",
+            "Bullet-point contributing factors",
+            "Key symptom drivers highlighted"
+          ],
+          "example_content": "The analysis indicates elevated fever risk consistent with a prolonged febrile illness. Key contributing factors include fever duration beyond 3 days, positive travel history, and documented sweating and muscle pain. SpO2 levels remain stable, reducing respiratory concern."
+        },
+        {
+          "section_number": 4,
+          "name": "Vital Signs Summary",
+          "description": "Cards for each sensor reading with normal range indicators",
+          "cards": [
+            { "label": "Temperature", "unit": "°C", "range_label": "Normal: 36.1–37.2°C" },
+            { "label": "SpO2", "unit": "%", "range_label": "Normal: 95–100%" },
+            { "label": "Heart Rate", "unit": "bpm", "range_label": "Normal: 60–100 bpm" },
+            { "label": "HRV Proxy", "unit": "ms", "range_label": "Higher = better autonomic function" },
+            { "label": "Humidity", "unit": "%", "range_label": "Comfortable: 30–60%" }
+          ]
+        },
+        {
+          "section_number": 5,
+          "name": "Symptom Burden Index",
+          "description": "Calculated from severity scores — separate from ML output",
+          "calculation": "Sum of all severity_value scores (max = 24 for 8 symptoms × 3)",
+          "levels": {
+            "Mild (0–8)": { "color": "green", "message": "Low overall symptom load" },
+            "Moderate (9–16)": { "color": "amber", "message": "Noticeable symptom burden — monitor closely" },
+            "Severe (17–24)": { "color": "red", "message": "Heavy symptom burden — medical review needed" }
+          },
+          "ui": "Horizontal health meter with animated fill + label"
+        },
+        {
+          "section_number": 6,
+          "name": "Smart Recommendations",
+          "description": "Gemini-generated actionable health advice",
+          "title_shown": "What To Do Next",
+          "format": "Numbered card list with icons",
+          "categories": [
+            "Hydration guidance",
+            "Rest and isolation advice",
+            "Medication over-the-counter suggestions",
+            "When to seek emergency care",
+            "Monitoring instructions for next 24-48 hours",
+            "Dietary suggestions"
+          ],
+          "tone": "Human, clear, medically styled — not robotic"
+        },
+        {
+          "section_number": 7,
+          "name": "Emergency Alerts",
+          "description": "Displayed prominently only when thresholds are exceeded",
+          "trigger_conditions": [
+            { "condition": "SpO2 < 90%", "level": "Critical", "message": "Dangerously low oxygen levels detected. Seek emergency care immediately." },
+            { "condition": "Temperature > 39.5°C (103.1°F)", "level": "Critical", "message": "Very high fever detected. Seek immediate medical attention." },
+            { "condition": "Heart Rate > 130 bpm", "level": "Critical", "message": "Significantly elevated heart rate. Emergency evaluation recommended." },
+            { "condition": "Fever duration > 3 days", "level": "Moderate", "message": "Prolonged fever requires medical evaluation. Schedule a doctor visit today." },
+            { "condition": "SpO2 90–94%", "level": "Moderate", "message": "Below normal oxygen saturation. Doctor consultation advised." }
+          ],
+          "ui": "Top-of-results sticky alert banner (red for critical, amber for moderate) with pulsing border animation and 'Find Emergency Care' CTA"
+        },
+        {
+          "section_number": 8,
+          "name": "Action Buttons",
+          "buttons": [
+            { "label": "Find Nearby Doctors", "action": "Navigate to /nearby-doctors with fever_type param", "style": "primary navy blue" },
+            { "label": "View My Health Trends", "action": "Navigate to /trends", "style": "secondary outlined" },
+            { "label": "Download Report (PDF)", "action": "Generate printable PDF summary", "style": "ghost" },
+            { "label": "Start New Scan", "action": "Navigate to /scan/medical-history", "style": "ghost" }
+          ]
+        }
+      ]
+    },
+
+    "nearby_doctors_screen": {
+      "route": "/nearby-doctors",
+      "header": "Recommended Specialists",
+      "description": "Doctors and clinics are filtered based on your triage output fever type",
+      "fever_type_to_specialty_mapping": {
+        "Malaria-like Pattern": ["Infectious Disease Specialist", "General Physician", "Tropical Medicine"],
+        "Typhoid-like Pattern": ["Gastroenterologist", "Infectious Disease Specialist", "General Physician"],
+        "Viral-like": ["General Physician", "Family Medicine", "Internal Medicine"],
+        "Bacterial-like": ["Internal Medicine", "General Physician", "Infectious Disease Specialist"],
+        "Respiratory-risk": ["Pulmonologist", "General Physician", "ENT Specialist"],
+        "Heat-stress risk": ["Emergency Medicine", "General Physician"],
+        "Normal Viral Fever": ["General Physician", "Family Medicine"]
+      },
+      "ui_layout": [
+        {
+          "element": "Fever Type Banner",
+          "content": "Small badge showing detected fever type + recommended specialty label"
+        },
+        {
+          "element": "Google Maps Embed",
+          "content": "Embedded map showing nearby hospitals/clinics",
+          "api": "Google Maps JavaScript API — VITE_GOOGLE_MAPS_API_KEY",
+          "search_query": "Built dynamically: 'infectious disease specialist near [user_location]'",
+          "marker_types": ["Hospital", "Clinic", "Emergency Center"]
+        },
+        {
+          "element": "Doctor Cards List",
+          "content": "Scrollable list below map — similar design to reference image (name, specialty, rating, location, distance, 'Get Directions' button)",
+          "data_source": "Google Places API results filtered by specialty",
+          "card_fields": ["name", "specialty", "rating", "distance", "address", "open_now status", "phone_number", "Get Directions button (links to Google Maps)"]
+        },
+        {
+          "element": "Filter Chips",
+          "content": "Specialty filter chips horizontally scrollable",
+          "chips": "Derived from fever_type_to_specialty_mapping for detected pattern"
+        }
+      ],
+      "note": "NO appointment booking implemented. Only discovery and navigation."
+    },
+
+    "trends_screen": {
+      "route": "/trends",
+      "header": "Health Trends",
+      "subheader": "Track your recovery and health progression over time",
+      "time_range_selector": {
+        "options": ["Last 7 Days", "Last 14 Days", "Last 30 Days"],
+        "default": "Last 7 Days",
+        "ui": "Pill chip selector at top of page"
+      },
+      "charts": [
+        {
+          "chart_id": "temperature_trend",
+          "title": "Body Temperature Over Time",
+          "type": "Recharts AreaChart",
+          "y_axis": "Temperature (°C)",
+          "x_axis": "Date",
+          "color": "#EF4444",
+          "reference_lines": [
+            { "y": 37.2, "label": "Normal threshold", "stroke": "#16A34A" },
+            { "y": 38.0, "label": "Mild fever", "stroke": "#D97706" },
+            { "y": 39.0, "label": "High fever", "stroke": "#DC2626" }
+          ],
+          "animation": true
+        },
+        {
+          "chart_id": "spo2_trend",
+          "title": "Blood Oxygen (SpO2) Over Time",
+          "type": "Recharts LineChart",
+          "y_axis": "SpO2 (%)",
+          "x_axis": "Date",
+          "color": "#0EA5E9",
+          "reference_lines": [
+            { "y": 95, "label": "Normal threshold", "stroke": "#16A34A" },
+            { "y": 90, "label": "Critical threshold", "stroke": "#DC2626" }
+          ]
+        },
+        {
+          "chart_id": "symptom_burden_trend",
+          "title": "Symptom Burden Score Over Time",
+          "type": "Recharts BarChart",
+          "y_axis": "Burden Score (0-24)",
+          "x_axis": "Date",
+          "color_function": "Green if ≤8, Amber if 9-16, Red if ≥17",
+          "annotation": "Recovery trend indicator (arrow + text if scores decreasing)"
+        },
+        {
+          "chart_id": "heart_rate_hrv_trend",
+          "title": "Heart Rate & HRV Over Time",
+          "type": "Recharts ComposedChart (Line + Bar)",
+          "y_axis_1": "Heart Rate (bpm)",
+          "y_axis_2": "HRV (ms)",
+          "colors": { "hr": "#F59E0B", "hrv": "#6366F1" }
+        },
+        {
+          "chart_id": "risk_level_timeline",
+          "title": "Risk Level History",
+          "type": "Custom timeline — horizontal color bands",
+          "y_axis": "Risk Level",
+          "values": { "Low": 1, "Moderate": 2, "High": 3, "Critical": 4 },
+          "colors": { "Low": "#16A34A", "Moderate": "#D97706", "High": "#EA580C", "Critical": "#DC2626" }
+        }
+      ],
+      "trend_indicators": {
+        "improving": "Green downward arrow icon + 'Recovery trend detected'",
+        "stable": "Blue horizontal arrow icon + 'Condition appears stable'",
+        "worsening": "Red upward arrow icon + 'Worsening trend — consider medical review'"
+      },
+      "scan_history_list": {
+        "title": "Scan History",
+        "items": "All scans sorted newest first — clickable to view full results",
+        "fields_shown": ["date", "risk_level badge", "primary_infection_pattern", "temperature", "spo2"]
+      }
+    },
+
+    "profile_screen": {
+      "route": "/profile",
+      "sections": [
+        "Google account avatar + name + email",
+        "Editable profile fields (age, gender, blood group)",
+        "Medical History quick view + edit link",
+        "Total scans count",
+        "Account created date",
+        "Sign Out button",
+        "Privacy Policy link",
+        "App version"
+      ]
+    },
+
+    "doctor_dashboard_screen": {
+      "route": "/doctor/dashboard",
+      "header": "Doctor Dashboard",
+      "sections": [
+        {
+          "name": "Patient Overview",
+          "content": "Count of total patients, active cases, critical alerts"
+        },
+        {
+          "name": "Patient List",
+          "content": "Searchable, filterable table of patients with risk level badges",
+          "columns": ["Name", "Last Scan Date", "Risk Level", "Primary Pattern", "Temperature", "Actions"]
+        },
+        {
+          "name": "Patient Detail View",
+          "route": "/doctor/patient/:id",
+          "content": [
+            "Patient profile summary",
+            "Medical history read-only view",
+            "All scan history with full results",
+            "Trend charts (same as patient trends screen)",
+            "AI-generated patient summary (from Gemini via backend)",
+            "Print / Export Report button"
+          ]
+        },
+        {
+          "name": "Critical Alerts Panel",
+          "content": "List of all patients with active critical alerts, sorted by severity"
+        }
+      ]
+    }
+  },
+
+  "backend_architecture": {
+    "folder_structure": {
+      "root": "nidan-ai-backend/",
+      "files": [
+        "main.py — FastAPI app entry point",
+        "config.py — environment variable loading",
+        "requirements.txt",
+        ".env.example"
+      ],
+      "folders": {
+        "routers/": [
+          "auth.py — JWT verification middleware",
+          "scans.py — scan submission and retrieval endpoints",
+          "hardware.py — ESP32 data proxy endpoints",
+          "trends.py — trend data aggregation endpoints",
+          "doctors.py — doctor management endpoints",
+          "recommendations.py — Gemini reasoning endpoints"
+        ],
+        "models/": [
+          "risk_model.pkl — Random Forest Risk Level model",
+          "infection_model.pkl — Random Forest Infection Pattern model",
+          "model_loader.py — loads models at startup"
+        ],
+        "services/": [
+          "gemini_service.py — all Gemini API calls (never exposed externally)",
+          "ml_service.py — ML model inference",
+          "supabase_service.py — Supabase client and CRUD operations",
+          "esp32_service.py — ESP32 data fetching logic",
+          "alerts_service.py — threshold checking and alert generation"
+        ],
+        "schemas/": [
+          "scan_schemas.py — Pydantic models for scan input/output",
+          "user_schemas.py — Pydantic models for user data",
+          "result_schemas.py — Pydantic models for ML + AI output"
+        ],
+        "utils/": [
+          "ppg_processor.py — optional server-side PPG signal processing",
+          "trend_calculator.py — trend analysis logic",
+          "symptom_mapper.py — severity to binary value mapping"
+        ]
+      }
+    },
+    "api_endpoints": {
+      "base_url": "BACKEND_API_URL (env var)",
+      "auth_middleware": "All protected routes require Supabase JWT in Authorization header",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/scans/submit",
+          "description": "Receive full scan data, run ML inference, call Gemini, store in Supabase, return result",
+          "auth": "required",
+          "body": "ScanSubmitRequest (all questionnaire + sensor + PPG data)",
+          "response": "ScanResult (risk_level, infection_patterns, ai_reasoning, recommendations, alerts)"
+        },
+        {
+          "method": "GET",
+          "path": "/api/scans/history",
+          "description": "Fetch all scans for authenticated patient",
+          "auth": "required",
+          "query_params": ["limit", "offset", "date_from", "date_to"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/scans/{scan_id}",
+          "description": "Fetch single scan full result",
+          "auth": "required"
+        },
+        {
+          "method": "GET",
+          "path": "/api/hardware/fetch",
+          "description": "Proxy request to ESP32 — fetch sensor readings",
+          "auth": "required",
+          "env_var_used": "ESP32_ENDPOINT",
+          "response": "{ temperature_c, spo2_percent, humidity_percent, heart_rate_bpm }"
+        },
+        {
+          "method": "GET",
+          "path": "/api/trends/daily",
+          "description": "Fetch daily_trends data for chart rendering",
+          "auth": "required",
+          "query_params": ["range: 7|14|30"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/trends/summary",
+          "description": "Get trend direction (improving/stable/worsening) based on last N scans",
+          "auth": "required"
+        },
+        {
+          "method": "POST",
+          "path": "/api/medical-history",
+          "description": "Save or update patient medical history",
+          "auth": "required"
+        },
+        {
+          "method": "GET",
+          "path": "/api/medical-history",
+          "description": "Fetch patient medical history for pre-fill",
+          "auth": "required"
+        },
+        {
+          "method": "GET",
+          "path": "/api/doctor/patients",
+          "description": "Doctor-only: fetch all linked patients",
+          "auth": "required (doctor role)"
+        },
+        {
+          "method": "GET",
+          "path": "/api/doctor/patient/{patient_id}/summary",
+          "description": "Doctor-only: AI-generated patient summary",
+          "auth": "required (doctor role)"
+        }
+      ]
+    },
+    "ml_inference_flow": {
+      "step_1": "Validate incoming ScanSubmitRequest with Pydantic",
+      "step_2": "Extract binary symptom features array for ML models",
+      "step_3": "Load risk_model.pkl → predict risk_level + confidence",
+      "step_4": "Load infection_model.pkl → predict infection probabilities array",
+      "step_5": "Compute symptom_burden_score from severity values",
+      "step_6": "Check alert thresholds (SpO2, temperature, HR, fever duration)",
+      "step_7": "Call gemini_service.generate_reasoning() with all outputs + medical history context",
+      "step_8": "Assemble final ScanResult object",
+      "step_9": "Store scan in Supabase scans table",
+      "step_10": "Upsert daily_trends table for today's date",
+      "step_11": "Return ScanResult to frontend"
+    },
+    "gemini_service": {
+      "model": "gemini-1.5-flash",
+      "api_key_location": "Backend .env file only — GEMINI_API_KEY",
+      "never_exposed_to": "Frontend, client, browser, network response headers",
+      "system_prompt": "You are a clinical AI assistant generating structured health triage reasoning. You must: (1) explain the predicted risk and infection patterns in professional medical language, (2) reference the patient's symptom profile and vitals as evidence, (3) generate 4-6 actionable health recommendations, (4) never directly diagnose a disease, (5) always recommend professional medical consultation for Moderate and above risk levels. Do not mention AI, Gemini, or any technology. Output must be structured JSON.",
+      "prompt_inputs": [
+        "risk_level",
+        "risk_confidence",
+        "infection_patterns (array)",
+        "symptom_values (all binary + severity)",
+        "sensor_values (temperature, spo2, hr, hrv)",
+        "fever_duration",
+        "medical_history (from Supabase — for context only)",
+        "patient_age",
+        "patient_gender",
+        "travel_history",
+        "alert_conditions_triggered"
+      ],
+      "expected_output_json": {
+        "reasoning_paragraphs": "array of 2-3 paragraph strings",
+        "contributing_factors": "array of factor strings",
+        "recommendations": "array of 4-6 recommendation objects { icon, title, description }",
+        "recovery_guidance": "string — what to monitor over the next 24-48 hours"
+      },
+      "fallback": "If Gemini API fails, use pre-written rule-based templates per risk level"
+    }
+  },
+
+  "frontend_folder_structure": {
+    "root": "nidan-ai-frontend/",
+    "files": [
+      "package.json",
+      "vite.config.js",
+      "tailwind.config.js",
+      ".env.example",
+      "index.html"
+    ],
+    "src/": {
+      "main.jsx": "App entry point",
+      "App.jsx": "Router setup with protected route wrapper",
+      "supabaseClient.js": "Supabase client initialization",
+      "components/": {
+        "ui/": [
+          "Button.jsx",
+          "Card.jsx",
+          "Badge.jsx",
+          "ProgressBar.jsx",
+          "Chip.jsx",
+          "LoadingSkeleton.jsx",
+          "AlertBanner.jsx",
+          "Avatar.jsx",
+          "BottomNav.jsx",
+          "TopBar.jsx",
+          "TabSwitcher.jsx",
+          "StepProgress.jsx"
+        ],
+        "charts/": [
+          "TemperatureTrendChart.jsx",
+          "SpO2TrendChart.jsx",
+          "SymptomBurdenChart.jsx",
+          "HeartRateHRVChart.jsx",
+          "RiskLevelTimeline.jsx",
+          "InfectionPatternBars.jsx",
+          "PPGLiveChart.jsx"
+        ],
+        "scan/": [
+          "SymptomCard.jsx",
+          "SensorCard.jsx",
+          "RiskLevelBanner.jsx",
+          "AIReasoningCard.jsx",
+          "RecommendationCard.jsx",
+          "AlertCard.jsx",
+          "SymptomBurdenMeter.jsx"
+        ],
+        "maps/": [
+          "NearbyDoctorsMap.jsx",
+          "DoctorCard.jsx"
+        ]
+      },
+      "pages/": [
+        "LandingPage.jsx",
+        "LoginPage.jsx",
+        "RegisterPage.jsx",
+        "DashboardPage.jsx",
+        "MedicalHistoryPage.jsx",
+        "QuestionnairePage.jsx",
+        "HardwarePage.jsx",
+        "PPGScanPage.jsx",
+        "AnalyzingPage.jsx",
+        "ResultsPage.jsx",
+        "TrendsPage.jsx",
+        "NearbyDoctorsPage.jsx",
+        "ProfilePage.jsx",
+        "DoctorDashboardPage.jsx",
+        "DoctorPatientDetailPage.jsx"
+      ],
+      "hooks/": [
+        "useAuth.js — Supabase auth state",
+        "useScan.js — scan flow state management",
+        "usePPG.js — camera PPG recording logic",
+        "useHardware.js — ESP32 fetch logic",
+        "useTrends.js — trend data fetching",
+        "useNearbyDoctors.js — Google Maps Places API"
+      ],
+      "context/": [
+        "AuthContext.jsx",
+        "ScanContext.jsx"
+      ],
+      "utils/": [
+        "temperatureConverter.js",
+        "symptomBurdenCalculator.js",
+        "alertThresholdChecker.js",
+        "dateFormatter.js",
+        "feverTypeToSpecialty.js"
+      ],
+      "constants/": [
+        "symptoms.js — symptom definitions + icons + questions",
+        "alertThresholds.js — numeric alert thresholds",
+        "feverSpecialtyMap.js — fever type to doctor specialty map"
+      ],
+      "api/": [
+        "scanApi.js — scan submission + history",
+        "hardwareApi.js — ESP32 proxy calls",
+        "trendsApi.js — trend data",
+        "medicalHistoryApi.js — medical history CRUD",
+        "doctorApi.js — doctor dashboard API calls"
+      ]
+    }
+  },
+
+  "environment_variables": {
+    "frontend_.env": {
+      "VITE_SUPABASE_URL": "Your Supabase project URL",
+      "VITE_SUPABASE_ANON_KEY": "Your Supabase anon public key",
+      "VITE_BACKEND_API_URL": "http://localhost:8000 (or production URL)",
+      "VITE_ESP32_ENDPOINT": "http://192.168.x.x/sensors (ESP32 local IP)",
+      "VITE_GOOGLE_MAPS_API_KEY": "Your Google Maps JavaScript API key"
+    },
+    "backend_.env": {
+      "SUPABASE_URL": "Your Supabase project URL",
+      "SUPABASE_SERVICE_ROLE_KEY": "Supabase service role key (server-side only)",
+      "GEMINI_API_KEY": "Your Gemini API key (NEVER expose to frontend)",
+      "ESP32_ENDPOINT": "http://192.168.x.x/sensors",
+      "MODEL_1_PATH": "models/risk_model.pkl",
+      "MODEL_2_PATH": "models/infection_model.pkl",
+      "ALLOWED_ORIGINS": "http://localhost:5173"
+    }
+  },
+
+  "security_requirements": {
+    "api_keys": [
+      "GEMINI_API_KEY: backend .env only — never in frontend bundle",
+      "SUPABASE_SERVICE_ROLE_KEY: backend only — use anon key on frontend",
+      "ESP32_ENDPOINT: can be in frontend for direct fetch, but prefer backend proxy for production"
+    ],
+    "authentication": [
+      "All API endpoints except health check require valid Supabase JWT",
+      "Doctor endpoints additionally check user_metadata.role === 'doctor'",
+      "Patient can only access own data — enforced via RLS in Supabase"
+    ],
+    "data_privacy": [
+      "Medical history is only used as Gemini context — never returned raw in API responses to unauthorized users",
+      "PPG signal data stored as compressed jsonb — not exposed publicly",
+      "All Supabase tables have RLS enabled"
+    ]
+  },
+
+  "ml_model_feature_vector": {
+    "description": "Exact feature array sent to both ML models",
+    "features": [
+      "age (int)",
+      "gender (0=male, 1=female, 2=other)",
+      "fever_duration (0-3)",
+      "headache_binary (0/1)",
+      "cough_binary (0/1)",
+      "vomiting_binary (0/1)",
+      "muscle_pain_binary (0/1)",
+      "rash_binary (0/1)",
+      "chills_binary (0/1)",
+      "sweating_binary (0/1)",
+      "travel_history_binary (0/1)",
+      "temperature_c (float)",
+      "spo2_percent (float)",
+      "heart_rate_bpm (float)",
+      "hrv_ms (float — 0 if PPG skipped)"
+    ],
+    "total_features": 15,
+    "severity_scores_stored_but_not_in_ml": [
+      "headache_severity", "cough_severity", "vomiting_severity",
+      "muscle_pain_severity", "rash_severity", "chills_severity",
+      "sweating_severity", "travel_history_severity"
+    ]
+  },
+
+  "daily_trends_update_logic": {
+    "trigger": "Every time a scan is submitted successfully",
+    "operation": "UPSERT into daily_trends WHERE patient_id = X AND date = TODAY()",
+    "aggregation": "Average of all scans on the same day for numeric fields",
+    "risk_level_aggregation": "Maximum severity across all scans on the day",
+    "scan_count_increment": "Increment by 1 per new scan"
+  },
+
+  "alert_system": {
+    "evaluation_order": "Check thresholds → generate alert objects → store in scans.alerts_triggered → display on results screen",
+    "alert_object_schema": {
+      "level": "critical | moderate | mild",
+      "condition": "description of triggered condition",
+      "message": "user-facing message",
+      "action": "optional CTA label"
+    },
+    "threshold_table": [
+      { "metric": "spo2_percent", "operator": "<", "value": 90, "level": "critical" },
+      { "metric": "spo2_percent", "operator": "between", "value": [90, 94], "level": "moderate" },
+      { "metric": "temperature_c", "operator": ">", "value": 39.5, "level": "critical" },
+      { "metric": "temperature_c", "operator": "between", "value": [38.0, 39.4], "level": "moderate" },
+      { "metric": "heart_rate_bpm", "operator": ">", "value": 130, "level": "critical" },
+      { "metric": "heart_rate_bpm", "operator": "between", "value": [100, 130], "level": "moderate" },
+      { "metric": "fever_duration", "operator": ">", "value": 2, "level": "moderate" },
+      { "metric": "risk_level", "operator": "=", "value": "Critical", "level": "critical" }
+    ]
+  },
+
+  "ppg_technical_spec": {
+    "canvas_dimensions": "320x240 (off-screen)",
+    "sampling_rate_target": "~30 fps (requestAnimationFrame)",
+    "signal_channel": "Green channel mean (most sensitive to blood volume changes)",
+    "duration": "60 seconds default, minimum 30 seconds",
+    "signal_processing": {
+      "normalization": "Z-score normalization of raw signal",
+      "detrending": "Moving average subtraction",
+      "peak_detection": "Adaptive threshold peak finder",
+      "hrv_calculation": "RMSSD of successive inter-peak intervals in milliseconds",
+      "bpm_from_ppg": "60 / mean(inter-peak intervals in seconds)"
+    },
+    "quality_indicators": {
+      "signal_quality_score": "Calculated from signal-to-noise ratio",
+      "low_quality_warning": "Show if SNR < threshold — 'Signal too weak, ensure finger covers lens'"
+    },
+    "storage": {
+      "raw_signal": "Downsample to 10 fps before storing (600 points for 60s)",
+      "format": "jsonb array in scans.ppg_raw_signal"
+    }
+  },
+
+  "google_maps_integration": {
+    "api_used": "Google Maps JavaScript API + Places API (Nearby Search)",
+    "key_env_var": "VITE_GOOGLE_MAPS_API_KEY",
+    "geolocation": "browser navigator.geolocation.getCurrentPosition() for user coordinates",
+    "places_search_types": ["hospital", "doctor", "health", "pharmacy"],
+    "filtering": "Filter by specialty keywords derived from detected fever type",
+    "displayed_fields": ["name", "vicinity", "rating", "opening_hours.open_now", "geometry.location", "formatted_phone_number"],
+    "map_style": "Clean minimal map style — light theme, suppress points of interest clutter",
+    "fallback": "If geolocation denied, show a location search input"
+  },
+
+  "component_design_details": {
+    "SymptomCard": {
+      "layout": "White card, 16px radius, soft shadow",
+      "icon_position": "Top-left with colored background circle",
+      "question_text": "16px, font-weight 600, #0F172A",
+      "description_text": "13px, #64748B",
+      "chip_row": "Horizontally scrollable pill chips below description",
+      "selected_chip_animation": "Scale 1.05 + color transition on select"
+    },
+    "RiskLevelBanner": {
+      "layout": "Full-width card with left colored border (4px) + soft tinted background",
+      "left_icon": "Large icon in circle (48px)",
+      "text_layout": "Risk level label (28px bold) + message below",
+      "gauge": "Radial SVG gauge showing confidence %"
+    },
+    "SensorCard": {
+      "layout": "Square card ~150px mobile / auto desktop",
+      "value": "28px bold center",
+      "unit": "14px muted below value",
+      "status_dot": "Colored dot (green/amber/red) based on range",
+      "icon": "24px top-center"
+    },
+    "BottomNav": {
+      "height": "72px",
+      "background": "White with top border 1px #E2E8F0",
+      "active_item": "Teal icon + small dot indicator below",
+      "inactive_item": "Gray icon, no label truncation"
+    },
+    "StepProgress": {
+      "style": "Linear pill progress bar + step label + step count",
+      "active_step": "Navy fill",
+      "completed_step": "Teal fill with checkmark",
+      "future_step": "Gray fill"
+    }
+  },
+
+  "animations_spec": {
+    "page_load": "Framer Motion AnimatePresence with fade + translateY(-12px → 0) per page",
+    "card_stagger": "Each card has initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }}",
+    "chart_entry": "All Recharts charts use animationBegin=200 animationDuration=1000",
+    "pulse_icon": "CSS: @keyframes ping { 0% { transform: scale(1); opacity: 1 } 100% { transform: scale(1.6); opacity: 0 } }",
+    "loading_skeleton": "CSS gradient shimmer: background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
+    "ppg_waveform": "Recharts LineChart updating every 100ms with last 200 data points — isAnimationActive=false for performance",
+    "progress_bar_fill": "CSS transition: width 0.8s ease-in-out on mount",
+    "alert_banner": "Framer Motion slide-down from top + red pulsing border"
+  },
+
+  "final_deliverables_checklist": [
+    "✅ Full React.js frontend (Vite) with Tailwind CSS",
+    "✅ Supabase Auth — Google OAuth patient login with persistent history",
+    "✅ Supabase PostgreSQL schema with all tables and RLS policies",
+    "✅ FastAPI backend with all endpoints",
+    "✅ Gemini API integration — internal reasoning layer, zero UI exposure",
+    "✅ ML model inference pipeline (Random Forest × 2)",
+    "✅ Medical History form with pre-population from Supabase",
+    "✅ Full symptom questionnaire with binary + severity mapping",
+    "✅ Hardware data screen — ESP32 fetch + manual entry tab switcher",
+    "✅ Camera PPG scan page with live waveform and HRV calculation",
+    "✅ Comprehensive results page with all 8 sections",
+    "✅ Nearby Doctors page filtered by fever type — Google Maps + Places API",
+    "✅ Daily + multi-week trend charts (5 chart types)",
+    "✅ Emergency alert system with threshold logic",
+    "✅ Smart recommendation cards (Gemini-powered, invisible)",
+    "✅ Doctor dashboard with patient management",
+    "✅ Mobile-first design matching reference UI style (white/navy/teal)",
+    "✅ Bottom navigation bar for mobile",
+    "✅ Framer Motion animations throughout",
+    "✅ Environment variable support for all API keys and endpoints",
+    "✅ Modular component architecture",
+    "✅ Professional production-style healthcare UI — NOT a student project"
+  ],
+
+  "design_reference_notes": {
+    "reference_image_analysis": "The provided reference images show a healthcare booking app with: white cards on light blue-gray background, navy blue (#1B4FD8 approx) CTA buttons, pill-shaped time selector chips, horizontal date picker with circular selected date highlight, bottom navigation bar with 4 icons, doctor profile cards with real photos, star ratings, specialty chips (Neurology, Dentistry, Gynaecology), search bar with filter icon, notification bell — ALL of these design patterns must be replicated in NIDAN-AI's interface adapted for triage context",
+    "chip_style": "Rounded pill chips: selected = navy blue fill + white text, unselected = light gray fill + dark gray text — exactly as in reference",
+    "card_style": "White background, 16px border-radius, 8px padding, 0 2px 12px rgba(0,0,0,0.06) shadow",
+    "button_style": "Primary CTA: navy blue fill #1B4FD8, white text, 12-14px border-radius, bold font, subtle shadow",
+    "bottom_bar_style": "Pure white, border-top, 4 items with icon + label, active item has colored icon and dot",
+    "typography_match": "Clean sans-serif — DM Sans recommended to match the clean aesthetic in reference images"
+  }
+}

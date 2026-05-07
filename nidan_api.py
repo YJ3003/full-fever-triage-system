@@ -22,7 +22,7 @@ import os
 import traceback
 from fastapi.middleware.cors import CORSMiddleware
 import motor.motor_asyncio
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 import asyncio
 
@@ -57,19 +57,18 @@ db = client.nidan_ai
 # Gemini Setup
 gemini_key = os.getenv("GEMINI_API_KEY")
 if gemini_key:
-    genai.configure(api_key=gemini_key)
-    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+    gemini_client = genai.Client(api_key=gemini_key)
 else:
-    gemini_model = None
+    gemini_client = None
 
 # ─── MODEL LOADING ────────────────────────────────────────────────────────────
 
 MODEL_FILES = {
-    "risk_model":       "nidan_risk_model.pkl",
-    "pattern_model":    "nidan_pattern_model.pkl",
-    "risk_encoder":     "nidan_risk_encoder.pkl",
-    "pattern_encoder":  "nidan_pattern_encoder.pkl",
-    "feature_list":     "nidan_feature_list.pkl",
+    "risk_model":       "models/nidan_risk_model.pkl",
+    "pattern_model":    "models/nidan_pattern_model.pkl",
+    "risk_encoder":     "models/nidan_risk_encoder.pkl",
+    "pattern_encoder":  "models/nidan_pattern_encoder.pkl",
+    "feature_list":     "models/nidan_feature_list.pkl",
 }
 
 models = {}
@@ -108,17 +107,19 @@ class TriageInput(BaseModel):
 
     # Questionnaire inputs
     age:            int   = Field(..., ge=0, le=120,  description="Patient age in years")
+    gender:         Optional[str] = Field(None, description="Patient gender")
     fever_days:     int   = Field(..., ge=0, le=60,   description="Number of days with fever")
+    medical_history: Optional[str] = Field(None, description="Pre-existing medical conditions")
 
-    # Symptom flags (0 = No, 1 = Yes)
-    headache:       int = Field(0, ge=0, le=1, description="Headache present")
-    cough:          int = Field(0, ge=0, le=1, description="Cough present")
-    vomiting:       int = Field(0, ge=0, le=1, description="Vomiting present")
-    myalgia:        int = Field(0, ge=0, le=1, description="Muscle aches (myalgia)")
-    rash:           int = Field(0, ge=0, le=1, description="Rash present")
-    rigors:         int = Field(0, ge=0, le=1, description="Chills / rigors present")
-    sweating:       int = Field(0, ge=0, le=1, description="Heavy sweating")
-    travel_history: int = Field(0, ge=0, le=1, description="Recent travel outside home region")
+    # Symptom flags (0-3 severity)
+    headache:       int = Field(0, ge=0, le=3, description="Headache severity")
+    cough:          int = Field(0, ge=0, le=3, description="Cough severity")
+    vomiting:       int = Field(0, ge=0, le=3, description="Vomiting severity")
+    myalgia:        int = Field(0, ge=0, le=3, description="Muscle aches (myalgia) severity")
+    rash:           int = Field(0, ge=0, le=3, description="Rash severity")
+    rigors:         int = Field(0, ge=0, le=3, description="Chills / rigors severity")
+    sweating:       int = Field(0, ge=0, le=3, description="Heavy sweating severity")
+    travel_history: int = Field(0, ge=0, le=3, description="Recent travel outside home region")
 
     model_config = {
         "json_schema_extra": {
@@ -165,14 +166,14 @@ def build_feature_row(inp: TriageInput, feature_list: list) -> pd.DataFrame:
         "Humidity":            inp.humidity if inp.humidity is not None else 50.0,
         "Age":                 inp.age,
         "Fever_Duration_days": inp.fever_days,
-        "Headache":            inp.headache,
-        "Cough":               inp.cough,
-        "Vomiting":            inp.vomiting,
-        "Myalgia":             inp.myalgia,
-        "Rash":                inp.rash,
-        "Rigors":              inp.rigors,
-        "Sweating":            inp.sweating,
-        "Travel_History":      inp.travel_history,
+        "Headache":            1 if inp.headache > 0 else 0,
+        "Cough":               1 if inp.cough > 0 else 0,
+        "Vomiting":            1 if inp.vomiting > 0 else 0,
+        "Myalgia":             1 if inp.myalgia > 0 else 0,
+        "Rash":                1 if inp.rash > 0 else 0,
+        "Rigors":              1 if inp.rigors > 0 else 0,
+        "Sweating":            1 if inp.sweating > 0 else 0,
+        "Travel_History":      1 if inp.travel_history > 0 else 0,
     }
     return pd.DataFrame([raw], columns=feature_list)
 
@@ -184,20 +185,26 @@ def top_features(model, feature_list: list, n: int = 3) -> list:
 # ─── CORE PREDICTION LOGIC ────────────────────────────────────────────────────
 
 async def generate_ai_explanation(inp: TriageInput, risk_label: str, pat_label: str) -> str:
-    if not gemini_model:
+    if not gemini_client:
         return "AI reasoning unavailable. Please consult a doctor."
     prompt = f"""
     Act as a professional medical triage AI for a system called NIDAN-AI.
     Patient details: Age {inp.age}, Fever for {inp.fever_days} days.
+    Medical History: {inp.medical_history or 'None provided'}.
     Vitals: Temp {inp.temperature_c}C, HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
-    Symptoms: Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
+    Symptoms severity (0-3): Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
     The ML model has classified the risk level as '{risk_label}' and pattern as '{pat_label}'.
     Provide a professional, clinical-sounding natural language explanation of these results in 2-3 short sentences. 
     Do not mention you are Gemini or AI. Just explain the triage reasoning clearly. Do not give direct disease diagnosis.
     """
     try:
+        def call_gemini():
+            return gemini_client.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=prompt
+            )
         # Run synchronous generate_content in thread pool
-        response = await asyncio.to_thread(gemini_model.generate_content, prompt)
+        response = await asyncio.to_thread(call_gemini)
         return response.text.strip()
     except Exception as e:
         print(f"Gemini error: {e}")
@@ -241,6 +248,8 @@ async def run_prediction(inp: TriageInput) -> TriageOutput:
             "heart_rate":    inp.heart_rate,
             "spo2":          inp.spo2,
             "fever_days":    inp.fever_days,
+            "gender":        inp.gender,
+            "medical_history": inp.medical_history,
             "symptom_flags": {
                 "headache": inp.headache, "cough": inp.cough,
                 "vomiting": inp.vomiting, "myalgia": inp.myalgia,
@@ -272,6 +281,18 @@ def health():
         "models_loaded": list(MODEL_FILES.keys()),
         "feature_count": len(models.get("feature_list", [])),
     }
+
+class GeminiKeyInput(BaseModel):
+    api_key: str
+
+@app.post("/config/gemini_key", summary="Update Gemini API Key for Explainable AI")
+def update_gemini_key(req: GeminiKeyInput):
+    global gemini_client
+    try:
+        gemini_client = genai.Client(api_key=req.api_key)
+        return {"status": "success", "message": "Gemini API key updated successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/features", summary="List expected input features")

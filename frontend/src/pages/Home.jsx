@@ -1,152 +1,113 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Thermometer, Droplets, Wind, AlertTriangle, ArrowRight, Heart } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-
-const VitalsCard = ({ title, value, unit, icon: Icon, color, delay }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.5 }}
-    className="card flex flex-col items-start gap-4 hover:shadow-md"
-  >
-    <div className={`p-3 rounded-xl bg-opacity-10 ${color.bg} ${color.text}`}>
-      <Icon className="w-6 h-6" />
-    </div>
-    <div>
-      <p className="text-gray-500 text-sm font-medium">{title}</p>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-bold text-gray-900">{value}</span>
-        <span className="text-sm font-medium text-gray-500">{unit}</span>
-      </div>
-    </div>
-  </motion.div>
-);
+import { Activity, Thermometer, Droplets, Heart, Shield, ArrowRight, Bell, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const navigate = useNavigate();
-  // Simulate live data
-  const [vitals, setVitals] = useState({
-    temp: 98.6,
-    spo2: 98,
-    hr: 75,
-    humidity: 45
-  });
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVitals(v => ({
-        temp: +(v.temp + (Math.random() - 0.5) * 0.2).toFixed(1),
-        spo2: Math.min(100, Math.max(90, v.spo2 + Math.floor((Math.random() - 0.5) * 2))),
-        hr: Math.min(120, Math.max(60, v.hr + Math.floor((Math.random() - 0.5) * 4))),
-        humidity: +(v.humidity + (Math.random() - 0.5)).toFixed(1)
-      }));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-8">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hello, Yug</h1>
-          <p className="text-gray-500 text-sm">Here is your live health overview.</p>
+          <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>{getGreeting()}</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>Here is your health summary</p>
         </div>
-        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
-          <img src="https://ui-avatars.com/api/?name=Yug+Jain&background=F3F4F6&color=000000" alt="Profile" />
-        </div>
+        <button className="relative p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+          <Bell size={20} color="#64748B" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <VitalsCard 
-          title="Body Temp" 
-          value={vitals.temp} 
-          unit="°F" 
-          icon={Thermometer} 
-          color={{ bg: 'bg-gray-100', text: 'text-gray-900' }} 
-          delay={0.1} 
-        />
-        <VitalsCard 
-          title="Oxygen SpO2" 
-          value={vitals.spo2} 
-          unit="%" 
-          icon={Wind} 
-          color={{ bg: 'bg-gray-100', text: 'text-gray-900' }} 
-          delay={0.2} 
-        />
-        <VitalsCard 
-          title="Heart Rate" 
-          value={vitals.hr} 
-          unit="bpm" 
-          icon={Heart} 
-          color={{ bg: 'bg-gray-100', text: 'text-gray-900' }} 
-          delay={0.3} 
-        />
-        <VitalsCard 
-          title="Environment" 
-          value={vitals.humidity} 
-          unit="% RH" 
-          icon={Droplets} 
-          color={{ bg: 'bg-gray-100', text: 'text-gray-900' }} 
-          delay={0.4} 
-        />
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Temperature', value: '—', unit: '°C', icon: Thermometer, color: '#064E3B' },
+          { label: 'SpO2', value: '—', unit: '%', icon: Droplets, color: '#0EA5E9' },
+          { label: 'Heart Rate', value: '—', unit: 'bpm', icon: Heart, color: '#D97706' },
+          { label: 'Risk Level', value: '—', unit: '', icon: Shield, color: '#16A34A' },
+        ].map((item, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+            className="card flex flex-col gap-3"
+          >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${item.color}12` }}>
+              <item.icon size={18} color={item.color} />
+            </div>
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#64748B' }}>{item.label}</p>
+              <p className="text-xl font-bold" style={{ color: '#0F172A' }}>
+                {item.value} <span className="text-xs font-normal" style={{ color: '#94A3B8' }}>{item.unit}</span>
+              </p>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      <motion.div
+      {/* Start New Scan CTA */}
+      <motion.button
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5 }}
-        className="card bg-gray-900 text-white border-none relative overflow-hidden"
+        transition={{ delay: 0.4 }}
+        onClick={() => navigate('/scan/medical-history')}
+        className="btn-primary text-base"
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10"></div>
-        <div className="absolute bottom-0 right-10 w-24 h-24 bg-white opacity-10 rounded-full -mb-8"></div>
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5" /> Current Status
-            </h3>
-            <p className="text-gray-400 text-sm mt-1">Monitoring active</p>
+        <Plus size={20} /> Start New Health Scan
+      </motion.button>
+
+      {/* Info Card */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="card"
+        style={{ background: '#ECFDF5', borderColor: '#A7F3D0' }}
+      >
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#064E3B' }}>
+            <Activity size={20} color="white" />
           </div>
-          <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm">
-            <span className="font-bold">Stable</span>
+          <div>
+            <h3 className="font-bold mb-1" style={{ color: '#064E3B' }}>NIDAN-AI Triage</h3>
+            <p className="text-sm" style={{ color: '#047857' }}>
+              Complete a health scan to get AI-powered risk assessment, infection pattern analysis, and personalized health recommendations.
+            </p>
           </div>
         </div>
       </motion.div>
 
-      <div className="space-y-4 pt-4">
-        <h3 className="font-semibold text-gray-900">Quick Actions</h3>
-        
-        <button 
-          onClick={() => navigate('/questionnaire')}
-          className="w-full card flex items-center justify-between hover:border-medical-teal cursor-pointer group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-900 group-hover:bg-gray-900 group-hover:text-white transition-colors">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
+      {/* Quick Actions */}
+      <div className="space-y-3">
+        <h3 className="font-bold" style={{ color: '#0F172A' }}>Quick Actions</h3>
+        {[
+          { title: 'New Triage Assessment', desc: 'Log symptoms and get AI analysis', route: '/scan/medical-history' },
+          { title: 'View Health Trends', desc: 'Track your recovery over time', route: '/trends' },
+        ].map((action, i) => (
+          <motion.button
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 + i * 0.1 }}
+            onClick={() => navigate(action.route)}
+            className="w-full card flex items-center justify-between hover:shadow-md group"
+            style={{ cursor: 'pointer' }}
+          >
             <div className="text-left">
-              <h4 className="font-medium text-gray-900">New Triage Assessment</h4>
-              <p className="text-xs text-gray-500">Log symptoms and get AI analysis</p>
+              <h4 className="font-semibold text-sm" style={{ color: '#0F172A' }}>{action.title}</h4>
+              <p className="text-xs" style={{ color: '#94A3B8' }}>{action.desc}</p>
             </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-medical-blue transition-colors" />
-        </button>
-
-        <button 
-          onClick={() => navigate('/camera-ppg')}
-          className="w-full card flex items-center justify-between hover:border-medical-teal cursor-pointer group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-900 group-hover:bg-gray-900 group-hover:text-white transition-colors">
-              <Heart className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <h4 className="font-medium text-gray-900">Camera PPG Scan</h4>
-              <p className="text-xs text-gray-500">Measure heart rate variability</p>
-            </div>
-          </div>
-          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
-        </button>
+            <ArrowRight size={18} color="#94A3B8" />
+          </motion.button>
+        ))}
       </div>
     </div>
   );

@@ -1,17 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldAlert, Activity, Heart, Thermometer, Info, MapPin, ArrowLeft } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ShieldAlert, CheckCircle, AlertTriangle, AlertOctagon, Siren, Activity, Thermometer, Heart, Droplets, Wind, Info, MapPin, ArrowLeft, ChevronRight, TrendingUp, FileText } from 'lucide-react';
 
-const mockTrendData = [
-  { day: 'Mon', temp: 98.6, spo2: 98 },
-  { day: 'Tue', temp: 99.1, spo2: 97 },
-  { day: 'Wed', temp: 100.5, spo2: 96 },
-  { day: 'Thu', temp: 101.8, spo2: 94 },
-  { day: 'Fri', temp: 102.1, spo2: 93 },
-  { day: 'Sat', temp: 101.5, spo2: 95 },
-  { day: 'Sun', temp: 99.8, spo2: 97 },
-];
+const RISK_CONFIG = {
+  Low: { color: '#16A34A', bg: '#F0FDF4', icon: CheckCircle, message: 'No immediate concern. Continue monitoring.' },
+  Moderate: { color: '#D97706', bg: '#FFFBEB', icon: AlertTriangle, message: 'Doctor consultation recommended soon.' },
+  High: { color: '#EA580C', bg: '#FFF7ED', icon: AlertOctagon, message: 'Please consult a doctor within 24 hours.' },
+  Critical: { color: '#DC2626', bg: '#FEF2F2', icon: Siren, message: 'Seek immediate medical attention.' },
+};
 
 export default function Results() {
   const { state } = useLocation();
@@ -19,164 +15,156 @@ export default function Results() {
 
   if (!state?.result) {
     return (
-      <div className="flex flex-col items-center justify-center h-[50vh]">
-        <p className="text-gray-500 mb-4">No results found.</p>
-        <button onClick={() => navigate('/')} className="btn-primary">Return Home</button>
+      <div className="flex flex-col items-center justify-center" style={{ minHeight: '50vh' }}>
+        <p style={{ color: '#64748B' }} className="mb-4">No results found.</p>
+        <button onClick={() => navigate('/')} className="btn-primary" style={{ maxWidth: 200 }}>Return Home</button>
       </div>
     );
   }
 
-  const { result, sensors, questionnaire } = state;
+  const { result, vitals, questionnaire } = state;
+  const riskConfig = RISK_CONFIG[result.risk_level] || RISK_CONFIG.Low;
+  const RiskIcon = riskConfig.icon;
 
-  const riskColors = {
-    'Low': 'bg-risk-low text-white',
-    'Moderate': 'bg-risk-moderate text-white',
-    'High': 'bg-risk-high text-white',
-    'Critical': 'bg-risk-critical text-white'
-  };
+  // Symptom Burden
+  const symptomScores = questionnaire?.symptoms || {};
+  const burdenScore = Object.values(symptomScores).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0) + (questionnaire?.travel_history || 0);
+  const maxBurden = 24;
+  const burdenPct = Math.min(100, (burdenScore / maxBurden) * 100);
+  const burdenLabel = burdenScore <= 8 ? 'Mild' : burdenScore <= 16 ? 'Moderate' : 'Severe';
+  const burdenColor = burdenScore <= 8 ? '#16A34A' : burdenScore <= 16 ? '#D97706' : '#DC2626';
 
-  const getSymptomBurden = () => {
-    let score = 0;
-    Object.values(questionnaire.symptoms).forEach(val => {
-      if (val === 'Mild') score += 1;
-      if (val === 'Moderate') score += 2;
-      if (val === 'Severe') score += 3;
-    });
-    if (score < 4) return { label: 'Mild', width: '33%', color: 'bg-green-500' };
-    if (score < 8) return { label: 'Moderate', width: '66%', color: 'bg-yellow-500' };
-    return { label: 'Severe', width: '100%', color: 'bg-red-500' };
-  };
-
-  const burden = getSymptomBurden();
+  // Alerts
+  const alerts = [];
+  if (vitals?.spo2 < 90) alerts.push({ level: 'critical', message: 'Dangerously low oxygen levels detected. Seek emergency care immediately.' });
+  else if (vitals?.spo2 <= 94) alerts.push({ level: 'moderate', message: 'Below normal oxygen saturation. Doctor consultation advised.' });
+  if (vitals?.temperature_c > 39.5) alerts.push({ level: 'critical', message: 'Very high fever detected. Seek immediate medical attention.' });
+  if (vitals?.heart_rate > 130) alerts.push({ level: 'critical', message: 'Significantly elevated heart rate. Emergency evaluation recommended.' });
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex items-center gap-4 mb-2">
-        <button onClick={() => navigate('/')} className="p-2 rounded-full hover:bg-gray-100">
-          <ArrowLeft className="w-5 h-5" />
+    <div className="space-y-5 pb-8">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button onClick={() => navigate('/')} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+          <ArrowLeft size={18} color="#64748B" />
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Triage Report</h1>
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>Your Health Report</h1>
+          <p className="text-sm" style={{ color: '#64748B' }}>Based on your symptoms and vitals</p>
+        </div>
       </div>
 
-      {/* Alert System */}
-      {(sensors.spo2 < 90 || sensors.temperature_c > 39.4 || sensors.heart_rate > 130) && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
-          <ShieldAlert className="w-6 h-6 text-red-600 shrink-0" />
-          <div>
-            <h4 className="text-red-800 font-bold">Critical Alert</h4>
-            <p className="text-red-700 text-sm">Vitals are outside safe ranges. Immediate medical attention is required.</p>
-          </div>
+      {/* Section 7: Emergency Alerts */}
+      {alerts.map((alert, i) => (
+        <motion.div key={i} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl p-4 flex gap-3 border-2"
+          style={{ background: alert.level === 'critical' ? '#FEF2F2' : '#FFFBEB', borderColor: alert.level === 'critical' ? '#FECACA' : '#FDE68A' }}
+        >
+          <ShieldAlert size={22} color={alert.level === 'critical' ? '#DC2626' : '#D97706'} className="shrink-0 mt-0.5" />
+          <p className="text-sm font-medium" style={{ color: alert.level === 'critical' ? '#991B1B' : '#92400E' }}>{alert.message}</p>
         </motion.div>
-      )}
+      ))}
 
-      {/* Triage Level Card */}
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`rounded-2xl p-6 shadow-lg ${riskColors[result.risk_level]}`}>
-        <div className="flex justify-between items-start mb-4">
+      {/* Section 1: Triage Level */}
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className="rounded-2xl p-6 border-l-4"
+        style={{ background: riskConfig.bg, borderLeftColor: riskConfig.color }}
+      >
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-white/80 font-medium text-sm">Assessed Risk Level</p>
-            <h2 className="text-4xl font-bold tracking-tight mt-1">{result.risk_level}</h2>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: riskConfig.color }}>Risk Level</p>
+            <h2 className="text-3xl font-bold" style={{ color: riskConfig.color }}>{result.risk_level}</h2>
+            <p className="text-sm mt-2" style={{ color: '#64748B' }}>{riskConfig.message}</p>
           </div>
-          <Activity className="w-10 h-10 opacity-50" />
-        </div>
-        <div className="bg-white/20 rounded-xl p-4 backdrop-blur-sm">
-          <p className="text-sm leading-relaxed font-medium">
-            {result.recommendation}
-          </p>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: `${riskConfig.color}15` }}>
+            <RiskIcon size={28} color={riskConfig.color} />
+          </div>
         </div>
       </motion.div>
 
-      {/* AI Explanation */}
-      <div className="card border-l-4 border-l-medical-teal">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-2">
-          <Info className="w-5 h-5 text-medical-teal" /> Clinical Reasoning
-        </h3>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          {result.ai_explanation || "Based on the provided vitals and symptoms, the clinical risk profile aligns with the assessed level."}
-        </p>
-      </div>
-
-      {/* Infection Pattern Probabilities */}
-      <div className="card space-y-4">
-        <h3 className="font-semibold text-gray-900">Pattern Analysis</h3>
+      {/* Section 2: Infection Pattern */}
+      <div className="card">
+        <h3 className="text-base font-bold mb-4" style={{ color: '#0F172A' }}>Pattern Analysis</h3>
         <div className="space-y-3">
-          {Object.entries(result.pattern_confidence)
-            .sort((a, b) => b[1] - a[1])
-            .map(([pattern, prob]) => (
+          {Object.entries(result.pattern_confidence || {}).sort((a, b) => b[1] - a[1]).map(([pattern, prob]) => (
             <div key={pattern}>
               <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-gray-700">{pattern}</span>
-                <span className="text-gray-500">{(prob * 100).toFixed(0)}%</span>
+                <span style={{ color: '#0F172A' }}>{pattern}</span>
+                <span style={{ color: '#64748B' }}>{(prob * 100).toFixed(0)}%</span>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${prob * 100}%` }}
-                  className="bg-gray-900 h-2 rounded-full"
-                />
+              <div className="w-full h-2 rounded-full" style={{ background: '#E2E8F0' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${prob * 100}%` }}
+                  transition={{ duration: 0.8, delay: 0.3 }}
+                  className="h-2 rounded-full" style={{ background: '#064E3B' }} />
               </div>
             </div>
           ))}
         </div>
+        <p className="text-xs mt-4" style={{ color: '#94A3B8' }}>These patterns are statistical indicators, not medical diagnoses.</p>
       </div>
 
-      {/* Sensor Vitals Recap */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-4 flex flex-col items-center justify-center text-center">
-          <Thermometer className="w-6 h-6 text-gray-900 mb-2" />
-          <span className="text-2xl font-bold text-gray-900">{sensors.temperature_c}°C</span>
-          <span className="text-xs text-gray-500">Temperature</span>
-        </div>
-        <div className="card p-4 flex flex-col items-center justify-center text-center">
-          <Heart className="w-6 h-6 text-gray-900 mb-2" />
-          <span className="text-2xl font-bold text-gray-900">{sensors.heart_rate}</span>
-          <span className="text-xs text-gray-500">Heart Rate</span>
-        </div>
-      </div>
-
-      {/* Symptom Burden Index */}
-      <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-4">Symptom Burden Index</h3>
-        <div className="flex justify-between text-xs font-medium mb-1">
-          <span className="text-gray-700">{burden.label} Burden</span>
-        </div>
-        <div className="w-full bg-gray-100 rounded-full h-3">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: burden.width }}
-            className={`${burden.color} h-3 rounded-full`}
-          />
-        </div>
-      </div>
-
-      {/* Trend Graph */}
-      <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-4">7-Day Vitals Trend</h3>
-        <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={mockTrendData}>
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
-              <YAxis yAxisId="left" domain={['dataMin - 1', 'dataMax + 1']} hide />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-              <Line yAxisId="left" type="monotone" dataKey="temp" stroke="#111827" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Nearby Facilities */}
-      <div className="card bg-gray-50">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
-          <MapPin className="w-5 h-5 text-gray-500" /> Nearby Healthcare
+      {/* Section 3: AI Health Reasoning */}
+      <div className="card border-l-4" style={{ borderLeftColor: '#064E3B' }}>
+        <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: '#0F172A' }}>
+          <Info size={18} color="#064E3B" /> Health Insights
         </h3>
-        <div className="aspect-video bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden relative">
-          {/* Mock Google Maps view */}
-          <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=hospital&zoom=14&size=600x300&maptype=roadmap&key=YOUR_API_KEY_HERE')] bg-cover bg-center opacity-30 grayscale blur-[1px]"></div>
-          <div className="relative z-10 bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 shadow-sm">
-            Map View Unavailable in Demo
+        <p className="text-sm leading-relaxed" style={{ color: '#475569' }}>
+          {result.ai_explanation || 'Based on the provided vitals and symptoms, the clinical risk profile aligns with the assessed level. Please consult a healthcare provider for definitive evaluation.'}
+        </p>
+      </div>
+
+      {/* Section 4: Vital Signs Summary */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Temperature', value: vitals?.temperature_c, unit: '°C', icon: Thermometer, range: '36.1–37.2°C' },
+          { label: 'SpO2', value: vitals?.spo2, unit: '%', icon: Droplets, range: '95–100%' },
+          { label: 'Heart Rate', value: vitals?.heart_rate, unit: 'bpm', icon: Heart, range: '60–100 bpm' },
+          { label: 'Humidity', value: vitals?.humidity, unit: '%', icon: Wind, range: '30–60%' },
+        ].map((item, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+            className="card text-center py-4 px-3">
+            <item.icon size={20} color="#064E3B" className="mx-auto mb-2" />
+            <p className="text-xl font-bold" style={{ color: '#0F172A' }}>{item.value || '—'}</p>
+            <p className="text-xs" style={{ color: '#64748B' }}>{item.unit}</p>
+            <p className="text-[10px] mt-1" style={{ color: '#94A3B8' }}>{item.range}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Section 5: Symptom Burden */}
+      <div className="card">
+        <h3 className="font-bold mb-1" style={{ color: '#0F172A' }}>Symptom Burden Index</h3>
+        <p className="text-xs mb-3" style={{ color: '#64748B' }}>Score: {burdenScore} / {maxBurden}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-3 rounded-full" style={{ background: '#E2E8F0' }}>
+            <motion.div initial={{ width: 0 }} animate={{ width: `${burdenPct}%` }}
+              transition={{ duration: 0.8 }} className="h-3 rounded-full"
+              style={{ background: burdenColor }} />
           </div>
+          <span className="text-sm font-bold" style={{ color: burdenColor }}>{burdenLabel}</span>
         </div>
       </div>
 
+      {/* Section 6: Recommendations */}
+      <div className="card">
+        <h3 className="font-bold mb-3" style={{ color: '#0F172A' }}>What To Do Next</h3>
+        <div className="space-y-3">
+          <p className="text-sm leading-relaxed" style={{ color: '#475569' }}>{result.recommendation}</p>
+        </div>
+      </div>
+
+      {/* Section 8: Action Buttons */}
+      <div className="space-y-3 pt-2">
+        <button className="btn-primary" onClick={() => navigate('/nearby-doctors', { state: { result } })}>
+          <MapPin size={18} /> Find Nearby Doctors
+        </button>
+        <button className="btn-secondary" onClick={() => navigate('/trends')}>
+          <TrendingUp size={18} /> View My Health Trends
+        </button>
+        <button className="btn-ghost" onClick={() => navigate('/scan/medical-history')}>
+          <Activity size={18} /> Start New Scan
+        </button>
+      </div>
     </div>
   );
 }
