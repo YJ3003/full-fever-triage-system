@@ -111,6 +111,54 @@ export default function TrendsPage() {
             ))}
           </div>
 
+          {/* Last Scan Analysis */}
+          {scans.length > 0 && (
+            <div className="card border-l-4" style={{ borderLeftColor: RISK_COLOR[scans[scans.length - 1].risk_level] || '#064E3B', marginBottom: '1.25rem' }}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-bold text-lg" style={{ color: '#0F172A' }}>Latest Scan Analysis</h3>
+                  <p className="text-xs" style={{ color: '#64748B' }}>
+                    {new Date(scans[scans.length - 1].created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 rounded-full"
+                  style={{ background: `${RISK_COLOR[scans[scans.length - 1].risk_level] || '#64748B'}15`, color: RISK_COLOR[scans[scans.length - 1].risk_level] || '#64748B' }}>
+                  {scans[scans.length - 1].risk_level} Risk
+                </span>
+              </div>
+              <p className="text-sm mb-4" style={{ color: '#0F172A' }}>
+                <span className="font-semibold" style={{ color: '#64748B' }}>Pattern:</span> {scans[scans.length - 1].infection_pattern || 'Unknown'}
+              </p>
+              <button 
+                className="btn-primary w-full py-2 text-sm" 
+                onClick={() => {
+                  let rawResult = {};
+                  let symptoms = {};
+                  try { rawResult = JSON.parse(scans[scans.length - 1].raw_result || '{}'); } catch(e){}
+                  try { symptoms = JSON.parse(scans[scans.length - 1].symptoms || '{}'); } catch(e){}
+                  
+                  navigate('/results', { 
+                    state: { 
+                      result: Object.keys(rawResult).length > 0 ? rawResult : { risk_level: scans[scans.length - 1].risk_level, infection_pattern: scans[scans.length - 1].infection_pattern, ai_explanation: scans[scans.length - 1].ai_explanation, recommendation: scans[scans.length - 1].recommendation }, 
+                      vitals: { 
+                        temperature_c: scans[scans.length - 1].temperature_c, 
+                        spo2: scans[scans.length - 1].spo2, 
+                        heart_rate: scans[scans.length - 1].heart_rate, 
+                        humidity: scans[scans.length - 1].humidity 
+                      }, 
+                      questionnaire: { 
+                        symptoms: symptoms,
+                        travel_history: scans[scans.length - 1].travel_history || 0
+                      } 
+                    } 
+                  });
+                }}
+              >
+                View Full Detailed Report
+              </button>
+            </div>
+          )}
+
           {/* Stats Row */}
           <div className="grid grid-cols-3 gap-3">
             {[
