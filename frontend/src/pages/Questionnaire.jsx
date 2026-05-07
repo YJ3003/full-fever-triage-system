@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ChevronRight, Brain, Wind, AlertCircle, Zap, Layers, Snowflake, Droplets, MapPin } from 'lucide-react';
@@ -40,6 +40,11 @@ export default function Questionnaire() {
   const medicalHistory = state?.medicalHistory || {};
 
   const [step, setStep] = useState(1); // 1 = basic info, 2 = symptoms
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
+  
   const [formData, setFormData] = useState({
     age: '',
     gender: 'Male',

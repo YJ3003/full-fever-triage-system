@@ -1,15 +1,32 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Thermometer, Droplets, Heart, Shield, ArrowRight, Bell, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user, getScans } = useAuth();
+  const [latestScan, setLatestScan] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      getScans(1).then(scans => {
+        if (scans && scans.length > 0) {
+          setLatestScan(scans[0]);
+        }
+      });
+    }
+  }, [user, getScans]);
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    let greeting = 'Good evening';
+    if (h < 12) greeting = 'Good morning';
+    else if (h < 17) greeting = 'Good afternoon';
+    
+    const name = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0];
+    return name ? `${greeting}, ${name}` : greeting;
   };
 
   return (
@@ -28,10 +45,10 @@ export default function Home() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Temperature', value: '—', unit: '°C', icon: Thermometer, color: '#064E3B' },
-          { label: 'SpO2', value: '—', unit: '%', icon: Droplets, color: '#0EA5E9' },
-          { label: 'Heart Rate', value: '—', unit: 'bpm', icon: Heart, color: '#D97706' },
-          { label: 'Risk Level', value: '—', unit: '', icon: Shield, color: '#16A34A' },
+          { label: 'Temperature', value: latestScan?.temperature_c || '—', unit: '°C', icon: Thermometer, color: '#064E3B' },
+          { label: 'SpO2', value: latestScan?.spo2 || '—', unit: '%', icon: Droplets, color: '#0EA5E9' },
+          { label: 'Heart Rate', value: latestScan?.heart_rate || '—', unit: 'bpm', icon: Heart, color: '#D97706' },
+          { label: 'Risk Level', value: latestScan?.risk_level || '—', unit: '', icon: Shield, color: '#16A34A' },
         ].map((item, i) => (
           <motion.div
             key={i}

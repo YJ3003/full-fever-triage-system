@@ -13,6 +13,8 @@ import Profile from './pages/Profile';
 import TrendsPage from './pages/TrendsPage';
 import NearbyDoctors from './pages/NearbyDoctors';
 
+import { useAuth } from './context/AuthContext';
+
 function BottomNav() {
   const location = useLocation();
   const items = [
@@ -43,6 +45,8 @@ function BottomNav() {
 }
 
 function App() {
+  const { user } = useAuth();
+  
   return (
     <Router>
       <div className="min-h-screen flex flex-col" style={{ background: '#F4F7FB' }}>
@@ -56,7 +60,17 @@ function App() {
                 NIDAN<span style={{ color: '#64748B' }}>-AI</span>
               </span>
             </Link>
-            <Link to="/auth" className="text-sm font-medium" style={{ color: '#64748B' }}>Login</Link>
+            {user ? (
+              <Link to="/profile">
+                <img 
+                  src={user.user_metadata?.avatar_url || 'https://www.gravatar.com/avatar/?d=mp'} 
+                  alt="Profile" 
+                  className="w-8 h-8 rounded-full border border-gray-200 object-cover"
+                />
+              </Link>
+            ) : (
+              <Link to="/auth" className="text-sm font-medium" style={{ color: '#64748B' }}>Login</Link>
+            )}
           </div>
         </header>
 

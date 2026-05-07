@@ -193,9 +193,13 @@ async def generate_ai_explanation(inp: TriageInput, risk_label: str, pat_label: 
     Medical History: {inp.medical_history or 'None provided'}.
     Vitals: Temp {inp.temperature_c}C, HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
     Symptoms severity (0-3): Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
-    The ML model has classified the risk level as '{risk_label}' and pattern as '{pat_label}'.
-    Provide a professional, clinical-sounding natural language explanation of these results in 2-3 short sentences. 
-    Do not mention you are Gemini or AI. Just explain the triage reasoning clearly. Do not give direct disease diagnosis.
+    
+    The ML model has classified the risk level as '{risk_label}' and the suspected infection pattern as '{pat_label}'.
+    
+    Task: Write a detailed, professional clinical reasoning paragraph explaining exactly *why* this classification was reached.
+    1. Specifically reference the exact vitals (like the high temp or abnormal SpO2) that contributed to the '{risk_label}' risk level.
+    2. Specifically link the reported symptoms (like rigors, myalgia, or rash) to the suspected '{pat_label}' pattern.
+    3. Be thorough but concise (about 3-4 sentences). Do not mention that you are an AI or Gemini. Act as the clinical reasoning engine. Do not provide a definitive medical diagnosis, refer to it as a "triage assessment" or "clinical profile".
     """
     try:
         def call_gemini():
