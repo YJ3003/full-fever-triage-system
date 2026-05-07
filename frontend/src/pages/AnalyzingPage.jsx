@@ -104,7 +104,12 @@ export default function AnalyzingPage() {
         });
       } catch (err) {
         console.error('Analysis error:', err);
-        const msg = err?.response?.data?.detail || err?.message || 'Unknown error';
+        let msg = err?.response?.data?.detail || err?.message || 'Unknown error';
+        if (Array.isArray(msg)) {
+          msg = msg.map(m => `${m.loc.join('.')}: ${m.msg}`).join(', ');
+        } else if (typeof msg === 'object') {
+          msg = JSON.stringify(msg);
+        }
         alert(`Analysis failed: ${msg}\n\nMake sure the backend is running on port 8000.`);
         navigate('/');
       }
