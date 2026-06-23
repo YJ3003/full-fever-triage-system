@@ -20,7 +20,8 @@ export default function NearbyDoctors() {
   const [errorMsg, setErrorMsg] = useState('');
   const [hospitals, setHospitals] = useState([]);
 
-  const feverPattern = state?.result?.infection_pattern || 'Unknown';
+  const rawFeverPattern = state?.result?.infection_pattern || 'Unknown';
+  const feverPattern = rawFeverPattern.split(' (')[0];
   const searchQuery = FEVER_TYPE_SEARCH[feverPattern] || 'general physician near me';
 
   useEffect(() => {
@@ -112,6 +113,7 @@ export default function NearbyDoctors() {
             setHospitals(topResults);
             setStatus('ready');
           } else {
+            console.warn('Places API failed or returned no results. Status:', status);
             // Fallback: Mock a few hospitals near the user's location if Places API fails or finds nothing
             const fallbackHospitals = [
               {
