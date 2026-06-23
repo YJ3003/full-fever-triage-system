@@ -26,13 +26,34 @@ export default function Results() {
   const riskConfig = RISK_CONFIG[result.risk_level] || RISK_CONFIG.Low;
   const RiskIcon = riskConfig.icon;
 
+  const sortedPatterns = Object.entries(result.pattern_confidence || {}).sort((a, b) => b[1] - a[1]);
+  const topPattern = sortedPatterns[0] || ['Unknown', 0];
+
+  const parseMarkdown = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    return lines.map((line, i) => {
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <p key={i} className={`text-sm leading-relaxed ${line.trim().startsWith('1.') || line.trim().startsWith('2.') || line.trim().startsWith('3.') || line.trim().startsWith('4.') ? 'mt-4 mb-1' : 'mb-1'}`} style={{ color: '#475569' }}>
+          {parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j} style={{ color: '#0F172A' }}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+        </p>
+      );
+    });
+  };
+
   // Symptom Burden
   const symptomScores = questionnaire?.symptoms || {};
   const burdenScore = Object.values(symptomScores).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0) + (questionnaire?.travel_history || 0);
-  const maxBurden = 24;
+  const maxBurden = 42; // 13 symptoms + travel history * 3
   const burdenPct = Math.min(100, (burdenScore / maxBurden) * 100);
-  const burdenLabel = burdenScore <= 8 ? 'Mild' : burdenScore <= 16 ? 'Moderate' : 'Severe';
-  const burdenColor = burdenScore <= 8 ? '#16A34A' : burdenScore <= 16 ? '#D97706' : '#DC2626';
+  const burdenLabel = burdenScore <= 14 ? 'Mild' : burdenScore <= 28 ? 'Moderate' : 'Severe';
+  const burdenColor = burdenScore <= 14 ? '#16A34A' : burdenScore <= 28 ? '#D97706' : '#DC2626';
 
   // Alerts
   const alerts = [];
@@ -84,9 +105,17 @@ export default function Results() {
 
       {/* Section 2: Infection Pattern */}
       <div className="card">
-        <h3 className="text-base font-bold mb-4" style={{ color: '#0F172A' }}>Pattern Analysis</h3>
-        <div className="space-y-3">
-          {Object.entries(result.pattern_confidence || {}).sort((a, b) => b[1] - a[1]).map(([pattern, prob]) => (
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#64748B' }}>Predicted Probabilistic Score</h3>
+          <p className="text-2xl font-bold" style={{ color: '#0F172A' }}>
+            {topPattern[0]}
+            <span className="text-lg font-medium ml-2" style={{ color: '#064E3B' }}>
+              {(topPattern[1] * 100).toFixed(0)}% Match
+            </span>
+          </p>
+        </div>
+        <div className="space-y-3 pt-4 border-t border-gray-100">
+          {sortedPatterns.map(([pattern, prob]) => (
             <div key={pattern}>
               <div className="flex justify-between text-xs font-medium mb-1">
                 <span style={{ color: '#0F172A' }}>{pattern}</span>
@@ -103,14 +132,22 @@ export default function Results() {
         <p className="text-xs mt-4" style={{ color: '#94A3B8' }}>These patterns are statistical indicators, not medical diagnoses.</p>
       </div>
 
-      {/* Section 3: AI Health Reasoning */}
-      <div className="card border-l-4" style={{ borderLeftColor: '#064E3B' }}>
-        <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: '#0F172A' }}>
-          <Info size={18} color="#064E3B" /> Health Insights
-        </h3>
-        <p className="text-sm leading-relaxed" style={{ color: '#475569' }}>
-          {result.ai_explanation || 'Based on the provided vitals and symptoms, the clinical risk profile aligns with the assessed level. Please consult a healthcare provider for definitive evaluation.'}
-        </p>
+      {/* Section 3: Explainable AI Report */}
+      <div className="card border-t-4" style={{ borderTopColor: '#2563EB', background: '#F8FAFC' }}>
+        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+          <div className="p-1.5 bg-blue-100 rounded-lg">
+            <Info size={20} color="#2563EB" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base" style={{ color: '#1E3A8A' }}>Explainable AI (XAI) Report</h3>
+            <p className="text-xs" style={{ color: '#3B82F6' }}>Generated Clinical Reasoning</p>
+          </div>
+        </div>
+        <div className="ai-report-content">
+          {parseMarkdown(result.ai_explanation) || (
+            <p className="text-sm text-gray-500">Analysis could not be generated. Please consult a doctor.</p>
+          )}
+        </div>
       </div>
 
       {/* Section 4: Vital Signs Summary */}

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ChevronRight, Thermometer, Droplets, Wind, Activity, Wifi, CheckCircle, AlertTriangle, Keyboard, Radio } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Thermometer, Droplets, Wind, Activity, Wifi, CheckCircle, AlertTriangle, Keyboard, Radio, MapPin } from 'lucide-react';
 
 const getTemperatureColor = (val) => {
   const v = parseFloat(val);
@@ -43,6 +43,47 @@ export default function HardwarePage() {
     heart_rate: '',
   });
 
+  const [geoContext, setGeoContext] = useState({
+    ambient_temp_c: null,
+    location_zone: 'temperate',
+    city: '',
+    status: 'idle'
+  });
+
+  useEffect(() => {
+    const fetchGeo = async () => {
+      setGeoContext(prev => ({ ...prev, status: 'fetching' }));
+      try {
+        // Use IP-based geolocation to bypass browser permission popups and ensure it works locally
+        const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+        const geoData = await geoRes.json();
+        const lat = parseFloat(geoData.latitude);
+        const lng = parseFloat(geoData.longitude);
+        const city = geoData.city || 'your region';
+        
+        const absLat = Math.abs(lat);
+        let zone = 'temperate';
+        if (absLat <= 23.5) zone = 'tropical';
+        else if (absLat <= 35) zone = 'subtropical';
+        else if (absLat <= 60) zone = 'temperate';
+        else zone = 'arid';
+        
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+        const data = await res.json();
+        
+        setGeoContext({
+          ambient_temp_c: data.current_weather.temperature,
+          location_zone: zone,
+          city: city,
+          status: 'success'
+        });
+      } catch (err) {
+        setGeoContext(prev => ({ ...prev, status: 'error' }));
+      }
+    };
+    fetchGeo();
+  }, []);
+
   const updateVital = (key, val) => setVitals(v => ({ ...v, [key]: val }));
 
   const handleFetch = async () => {
@@ -74,6 +115,8 @@ export default function HardwarePage() {
           heart_rate: parseInt(vitals.heart_rate),
           spo2: parseInt(vitals.spo2),
           humidity: parseFloat(vitals.humidity) || 50,
+          ambient_temp_c: geoContext.ambient_temp_c,
+          location_zone: geoContext.city ? `${geoContext.location_zone} (${geoContext.city})` : geoContext.location_zone,
         },
         hardware_source: activeTab === 'fetch' ? 'esp32' : 'manual',
       }
@@ -93,6 +136,32 @@ export default function HardwarePage() {
           <p className="text-sm" style={{ color: '#64748B' }}>Step 3 of 4 · Collect your vital signs</p>
         </div>
       </div>
+
+      {geoContext.status === 'success' && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 p-3 rounded-xl flex items-center gap-3" style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: '#DBEAFE' }}>
+            <MapPin size={16} color="#2563EB" />
+          </div>
+          <div>
+            <p className="text-xs font-bold" style={{ color: '#1E3A8A' }}>Geo-Aware Calibration Active</p>
+            <p className="text-[11px]" style={{ color: '#1D4ED8' }}>Adjusting baseline for {geoContext.city} ({geoContext.location_zone} climate, {geoContext.ambient_temp_c}°C ambient)</p>
+          </div>
+        </motion.div>
+      )}
+      
+      {geoContext.status === 'error' && (
+        <div className="mb-6 p-3 rounded-xl flex items-center gap-3 bg-gray-50 border border-gray-200">
+          <MapPin size={16} className="text-gray-400" />
+          <p className="text-xs text-gray-500">Could not detect location. Using standard global fever thresholds.</p>
+        </div>
+      )}
+
+      {geoContext.status === 'fetching' && (
+        <div className="mb-6 p-3 rounded-xl flex items-center gap-3 bg-gray-50 border border-gray-200">
+          <div className="w-4 h-4 border-2 rounded-full animate-spin border-gray-300 border-t-gray-600" />
+          <p className="text-xs text-gray-500">Detecting local climate...</p>
+        </div>
+      )}
 
       <div className="step-progress mb-8">
         <div className="step-progress-fill" style={{ width: '75%' }} />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ChevronRight, Brain, Wind, AlertCircle, Zap, Layers, Snowflake, Droplets, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Brain, Wind, AlertCircle, Zap, Layers, Snowflake, Droplets, MapPin, Eye, Activity, Heart } from 'lucide-react';
 
 const SYMPTOMS = [
   { id: 'headache', icon: Brain, question: 'How severe is your headache?', description: 'Include any throbbing, pressure, or location-specific pain' },
@@ -11,6 +11,12 @@ const SYMPTOMS = [
   { id: 'rash', icon: Layers, question: 'Have you noticed skin rash or red spots?', description: 'Include any unusual skin changes, spots, or irritation' },
   { id: 'rigors', icon: Snowflake, question: 'Have you experienced chills or shivering?', description: 'Include sudden cold feelings despite high temperature' },
   { id: 'sweating', icon: Droplets, question: 'Are you experiencing unusual sweating?', description: 'Include night sweats or excessive perspiration' },
+  { id: 'petechiae', icon: Layers, question: 'Do you have tiny red/purple spots on skin (petechiae)?', description: 'Small dot-like hemorrhages under the skin' },
+  { id: 'retroorbital_pain', icon: Eye, question: 'Is your headache behind your eyes?', description: 'Pain specifically located behind the eyes' },
+  { id: 'cyclical_fever', icon: Activity, question: 'Is the fever coming in regular waves?', description: 'Feeling fine in between fever spikes' },
+  { id: 'dark_urine', icon: Droplets, question: 'Have you noticed your urine is darker or less frequent?', description: 'Sign of potential dehydration or kidney stress' },
+  { id: 'stomach_pain', icon: AlertCircle, question: 'Do you have stomach or abdominal pain?', description: 'Any persistent dull or sharp pain' },
+  { id: 'bleeding_tendency', icon: Heart, question: 'Any bleeding gums, nose bleeds, or easy bruising?', description: 'Unusual bleeding tendencies' },
 ];
 
 const SEVERITY_OPTIONS = [
@@ -51,6 +57,7 @@ export default function Questionnaire() {
     fever_duration: 0,
     symptoms: SYMPTOMS.reduce((acc, s) => ({ ...acc, [s.id]: 0 }), {}),
     travel_history: 0,
+    recent_vaccination: false,
   });
 
   const updateSymptom = (id, val) => setFormData(f => ({ ...f, symptoms: { ...f.symptoms, [id]: val } }));
@@ -102,6 +109,17 @@ export default function Questionnaire() {
               required
             />
           </div>
+
+          {formData.age !== '' && parseInt(formData.age) <= 12 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="card border-l-4" style={{ borderLeftColor: '#3B82F6', background: '#EFF6FF' }}>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1E3A8A' }}>Pediatric Triage: Recent Vaccination?</label>
+              <p className="text-xs mb-3" style={{ color: '#2563EB' }}>Has the child received any vaccination in the last 48 hours? (Helps prevent false alarms for vaccine-induced fevers).</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div onClick={() => setFormData(f => ({ ...f, recent_vaccination: true }))} className={`chip ${formData.recent_vaccination ? 'chip-selected' : 'chip-unselected'}`} style={formData.recent_vaccination ? { background: '#2563EB', color: 'white', borderColor: '#2563EB' } : {}}>Yes</div>
+                <div onClick={() => setFormData(f => ({ ...f, recent_vaccination: false }))} className={`chip ${!formData.recent_vaccination ? 'chip-selected' : 'chip-unselected'}`} style={!formData.recent_vaccination ? { background: '#2563EB', color: 'white', borderColor: '#2563EB' } : {}}>No</div>
+              </div>
+            </motion.div>
+          )}
 
           <div className="card">
             <label className="block text-sm font-semibold mb-2" style={{ color: '#0F172A' }}>Gender</label>

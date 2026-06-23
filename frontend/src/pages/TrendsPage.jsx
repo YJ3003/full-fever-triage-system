@@ -42,6 +42,31 @@ export default function TrendsPage() {
     load();
   }, [user]);
 
+  const analyzeFeverCurve = (allScans) => {
+    const validScans = allScans.filter(s => s.temperature_c).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    if (validScans.length < 3) return { type: 'Insufficient Data', desc: 'Need at least 3 scans to determine pattern.', color: '#94A3B8' };
+    const recent = validScans.slice(-7);
+    if (recent.length < 3) return { type: 'Insufficient Data', desc: 'Need at least 3 recent temperature readings.', color: '#94A3B8' };
+    let isIncreasing = true;
+    let isSustainedHigh = true;
+    let peaksAndValleys = 0;
+    for (let i = 1; i < recent.length; i++) {
+      const prev = recent[i-1].temperature_c;
+      const curr = recent[i].temperature_c;
+      if (curr < prev) isIncreasing = false;
+      if (curr < 37.5) isSustainedHigh = false;
+      if (i > 1) {
+        const prevPrev = recent[i-2].temperature_c;
+        if ((prev > prevPrev && prev > curr) || (prev < prevPrev && prev < curr)) peaksAndValleys++;
+      }
+    }
+    if (isSustainedHigh && recent.every(s => s.temperature_c >= 38.0)) return { type: 'Sustained High (Possible Dengue/Severe Viral)', desc: 'Consistently high fever. Strongly correlates with Dengue or severe systemic viral infections. Requires immediate medical attention.', color: '#DC2626' };
+    if (isIncreasing && recent[recent.length - 1].temperature_c > 37.5) return { type: 'Step-ladder (Possible Typhoid/Enteric)', desc: 'Progressively increasing temperature over days. Often associated with Enteric (Typhoid) fever. Blood cultures or Widal tests may be recommended.', color: '#EA580C' };
+    if (peaksAndValleys >= 1 && recent.some(s => s.temperature_c >= 38.0)) return { type: 'Cyclical / Intermittent (Possible Malaria)', desc: 'Fever spiking and dropping sharply. This paroxysmal pattern is highly characteristic of Malaria or certain bacterial infections. Blood smear tests recommended.', color: '#D97706' };
+    return { type: 'Irregular / Fluctuating', desc: 'No clear definitive geometric pattern detected. Often indicates a standard viral infection or resolving illness. Continue monitoring.', color: '#16A34A' };
+  };
+  const curveAnalysis = analyzeFeverCurve(scans);
+
   // Prepare chart data
   const chartData = scans.map((s, i) => ({
     label: new Date(s.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
@@ -156,6 +181,27 @@ export default function TrendsPage() {
               >
                 View Full Detailed Report
               </button>
+            </div>
+          )}
+
+          {/* Temporal Fever Curve Analyzer */}
+          {scans.length > 0 && (
+            <div className="card mb-5 border-t-4" style={{ borderTopColor: curveAnalysis.color, background: '#F8FAFC' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-lg" style={{ background: `${curveAnalysis.color}20` }}>
+                  <Activity size={20} color={curveAnalysis.color} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base" style={{ color: '#0F172A' }}>Temporal Fever Analyzer</h3>
+                  <p className="text-xs" style={{ color: '#64748B' }}>Longitudinal Pattern Detection</p>
+                </div>
+              </div>
+              <p className="text-sm font-bold mb-1" style={{ color: curveAnalysis.color }}>
+                {curveAnalysis.type}
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: '#475569' }}>
+                {curveAnalysis.desc}
+              </p>
             </div>
           )}
 

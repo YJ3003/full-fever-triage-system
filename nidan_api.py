@@ -26,7 +26,7 @@ from google import genai
 from dotenv import load_dotenv
 import asyncio
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ─── APP SETUP ────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ db = client.nidan_ai
 # Gemini Setup
 gemini_key = os.getenv("GEMINI_API_KEY")
 if gemini_key:
-    gemini_client = genai.Client(api_key=gemini_key)
+    gemini_client = genai.Client(api_key=gemini_key.strip())
 else:
     gemini_client = None
 
@@ -120,6 +120,21 @@ class TriageInput(BaseModel):
     rigors:         int = Field(0, ge=0, le=3, description="Chills / rigors severity")
     sweating:       int = Field(0, ge=0, le=3, description="Heavy sweating severity")
     travel_history: int = Field(0, ge=0, le=3, description="Recent travel outside home region")
+
+    # New differential symptom flags (0-3 severity)
+    petechiae:         int = Field(0, ge=0, le=3, description="Tiny red/purple spots on skin")
+    retroorbital_pain: int = Field(0, ge=0, le=3, description="Pain behind the eyes")
+    cyclical_fever:    int = Field(0, ge=0, le=3, description="Fever coming in regular waves")
+    dark_urine:        int = Field(0, ge=0, le=3, description="Dark or less frequent urine")
+    stomach_pain:      int = Field(0, ge=0, le=3, description="Stomach pain or nausea")
+    bleeding_tendency: int = Field(0, ge=0, le=3, description="Bleeding gums, nose bleeds, easy bruising")
+
+    # Geo-aware fields
+    ambient_temp_c: Optional[float] = Field(None, description="Ambient temperature in Celsius")
+    location_zone:  Optional[str]   = Field("tropical", description="Climate zone (e.g., tropical, temperate)")
+
+    # Pediatric fields
+    recent_vaccination: bool = Field(False, description="Whether the pediatric patient had a recent vaccination")
 
     model_config = {
         "json_schema_extra": {
@@ -189,30 +204,52 @@ async def generate_ai_explanation(inp: TriageInput, risk_label: str, pat_label: 
         return "AI reasoning unavailable. Please consult a doctor."
     prompt = f"""
     Act as a professional medical triage AI for a system called NIDAN-AI.
-    Patient details: Age {inp.age}, Fever for {inp.fever_days} days.
+    Patient details: Age {inp.age}, Fever for {inp.fever_days} days. Climate Zone: {inp.location_zone}.
+    Pediatric Vaccination Status: {'Yes (Within 48hrs)' if inp.recent_vaccination else 'No/Not Applicable'}.
     Medical History: {inp.medical_history or 'None provided'}.
-    Vitals: Temp {inp.temperature_c}C, HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
-    Symptoms severity (0-3): Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
+    Vitals: Temp {inp.temperature_c}C (ambient: {inp.ambient_temp_c or 'unknown'}C), HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
+    Core Symptoms severity (0-3): Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
+    Differential Symptoms (0-3): Petechiae({inp.petechiae}), Retroorbital Pain({inp.retroorbital_pain}), Cyclical Fever({inp.cyclical_fever}), Dark Urine({inp.dark_urine}), Stomach Pain({inp.stomach_pain}), Bleeding Tendency({inp.bleeding_tendency}).
     
     The ML model has classified the risk level as '{risk_label}' and the suspected infection pattern as '{pat_label}'.
     
-    Task: Write a detailed, professional clinical reasoning paragraph explaining exactly *why* this classification was reached.
-    1. Specifically reference the exact vitals (like the high temp or abnormal SpO2) that contributed to the '{risk_label}' risk level.
-    2. Specifically link the reported symptoms (like rigors, myalgia, or rash) to the suspected '{pat_label}' pattern.
-    3. Be thorough but concise (about 3-4 sentences). Do not mention that you are an AI or Gemini. Act as the clinical reasoning engine. Do not provide a definitive medical diagnosis, refer to it as a "triage assessment" or "clinical profile".
+    Task: Write a highly detailed, professional clinical reasoning report (Explainable AI Analysis) explaining exactly *why* this classification was reached. Format the response in Markdown.
+    Include the following sections:
+    1. **Primary Clinical Assessment**: A summary of the risk level ({risk_label}) and the primary suspected fever pattern ({pat_label}).
+    2. **Vital Signs & Geo-Calibration**: Deeply analyze the provided vitals. Note that the patient is in a {inp.location_zone} climate with an ambient temperature of {inp.ambient_temp_c}C. Explicitly explain how this geographic location and ambient heat alters their baseline fever expectation (e.g., in tropical climates, core temperatures naturally run slightly higher, preventing false alarms). If the patient had a recent pediatric vaccination, explicitly weigh this as a highly likely cause for the fever.
+    3. **Symptomatic Evidence**: Analyze the specific combination of symptoms. Deeply analyze the 'Differential Symptoms' which are highly specific markers for tropical diseases (e.g., retroorbital pain/petechiae/bleeding for Dengue, cyclical fever/rigors/dark urine for Malaria, step-ladder fever for Typhoid). Link these precisely to the suspected pattern.
+    4. **Recommendations & Precautions**: Actionable medical advice based on this specific profile.
+    
+    Be thorough, clinical, but accessible. Do not mention that you are an AI or Gemini. Act as the clinical reasoning engine. Do not provide a definitive medical diagnosis, refer to it as a "probabilistic triage assessment".
     """
     try:
         def call_gemini():
             return gemini_client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
-        # Run synchronous generate_content in thread pool
-        response = await asyncio.to_thread(call_gemini)
+        # Run synchronous generate_content in thread pool with a long timeout to allow for Google rate limiting delays
+        response = await asyncio.wait_for(asyncio.to_thread(call_gemini), timeout=90.0)
         return response.text.strip()
+    except asyncio.TimeoutError:
+        print("Gemini error: Timeout exceeded (90s). Rate limit or high load.")
+        return "AI Analysis timed out due to high API load or rate limits. Please try running another scan in a few minutes."
     except Exception as e:
         print(f"Gemini error: {e}")
-        return "Explanation could not be generated."
+        return "Explanation could not be generated due to an API error. Please try again."
+
+def normalize_body_temperature(body_temp_c: float, ambient_temp_c: Optional[float], location_zone: str) -> float:
+    ZONE_BASELINE_OFFSET = {
+        "tropical": 0.3,
+        "subtropical": 0.15,
+        "temperate": 0.0,
+        "arid": 0.2
+    }
+    baseline_offset = ZONE_BASELINE_OFFSET.get((location_zone or "").lower(), 0.15)
+    ambient_offset = 0.1 if ambient_temp_c is not None and ambient_temp_c > 35 else 0.0
+    total_offset = baseline_offset + ambient_offset
+    normalized_temp = body_temp_c - total_offset
+    return max(35.0, normalized_temp)
 
 async def run_prediction(inp: TriageInput) -> TriageOutput:
     feature_list  = models["feature_list"]
@@ -221,13 +258,24 @@ async def run_prediction(inp: TriageInput) -> TriageOutput:
     risk_enc      = models["risk_encoder"]
     pattern_enc   = models["pattern_encoder"]
 
-    row = build_feature_row(inp, feature_list)
+    # Normalize temperature for the ML model based on geo-context
+    normalized_temp = normalize_body_temperature(inp.temperature_c, inp.ambient_temp_c, inp.location_zone)
+    inp_for_model = inp.model_copy(update={"temperature_c": normalized_temp})
+
+    row = build_feature_row(inp_for_model, feature_list)
 
     # Model 1 — risk level
     risk_pred_idx   = risk_model.predict(row)[0]
     risk_label      = risk_enc.inverse_transform([risk_pred_idx])[0]
     risk_proba      = risk_model.predict_proba(row)[0]
     risk_confidence = {risk_enc.classes_[i]: round(float(p), 3) for i, p in enumerate(risk_proba)}
+
+    # Pediatric Vaccination Override
+    if inp.recent_vaccination and inp.age <= 12:
+        if risk_label in ["High", "Moderate"]:
+            risk_label = "Low" if risk_label == "Moderate" else "Moderate"
+            if risk_label in risk_confidence:
+                risk_confidence[risk_label] = 0.85
 
     # Model 2 — infection pattern
     pat_pred_idx   = pattern_model.predict(row)[0]
@@ -258,7 +306,14 @@ async def run_prediction(inp: TriageInput) -> TriageOutput:
                 "headache": inp.headache, "cough": inp.cough,
                 "vomiting": inp.vomiting, "myalgia": inp.myalgia,
                 "rash": inp.rash, "rigors": inp.rigors,
-                "sweating": inp.sweating, "travel": inp.travel_history
+                "sweating": inp.sweating, "travel": inp.travel_history,
+                "petechiae": inp.petechiae, "retroorbital_pain": inp.retroorbital_pain,
+                "cyclical_fever": inp.cyclical_fever, "dark_urine": inp.dark_urine,
+                "stomach_pain": inp.stomach_pain, "bleeding_tendency": inp.bleeding_tendency
+            },
+            "geo_context": {
+                "ambient_temp_c": inp.ambient_temp_c,
+                "location_zone": inp.location_zone
             }
         }
     )

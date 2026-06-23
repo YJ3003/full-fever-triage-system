@@ -43,6 +43,8 @@ export default function AnalyzingPage() {
           heart_rate: effectiveHR,
           spo2: state.vitals.spo2,
           humidity: state.vitals.humidity || 50,
+          ambient_temp_c: state.vitals.ambient_temp_c || null,
+          location_zone: state.vitals.location_zone || "temperate",
           hrv: effectiveHRV,
           age: parseInt(q.age) || 30,
           gender: q.gender,
@@ -56,6 +58,13 @@ export default function AnalyzingPage() {
           rigors: q.symptoms?.rigors || 0,
           sweating: q.symptoms?.sweating || 0,
           travel_history: q.travel_history || 0,
+          petechiae: q.symptoms?.petechiae || 0,
+          retroorbital_pain: q.symptoms?.retroorbital_pain || 0,
+          cyclical_fever: q.symptoms?.cyclical_fever || 0,
+          dark_urine: q.symptoms?.dark_urine || 0,
+          stomach_pain: q.symptoms?.stomach_pain || 0,
+          bleeding_tendency: q.symptoms?.bleeding_tendency || 0,
+          recent_vaccination: q.recent_vaccination || false,
         };
 
         const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
