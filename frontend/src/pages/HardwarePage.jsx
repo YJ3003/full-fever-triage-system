@@ -3,29 +3,59 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ChevronRight, Thermometer, Droplets, Wind, Activity, Wifi, CheckCircle, AlertTriangle, Keyboard, Radio, MapPin } from 'lucide-react';
 
-const getTemperatureColor = (val) => {
-  const v = parseFloat(val);
-  if (!v) return '#94A3B8';
-  if (v <= 37.2) return '#16A34A';
-  if (v <= 38.0) return '#D97706';
-  if (v <= 39.0) return '#EA580C';
+const getTemperatureColor = (val, age, unit = 'C') => {
+  let v = parseFloat(val);
+  if (isNaN(v) || v === 0) return '#94A3B8';
+  if (unit === 'F') v = (v - 32) * 5 / 9; // convert to C for logic
+  const a = parseInt(age) || 30;
+  if (v < 35 || v > 43) return '#DC2626'; // extreme/invalid
+  
+  const normalMax = a <= 3 ? 37.5 : 37.2;
+  const borderlineMax = a <= 3 ? 38.3 : 38.0;
+  
+  if (v <= normalMax && v >= 36.1) return '#16A34A';
+  if (v <= borderlineMax) return '#D97706';
   return '#DC2626';
 };
 
 const getSpo2Color = (val) => {
   const v = parseInt(val);
-  if (!v) return '#94A3B8';
+  if (isNaN(v) || v === 0) return '#94A3B8';
+  if (v < 70 || v > 100) return '#DC2626'; // extreme/invalid
   if (v >= 95) return '#16A34A';
   if (v >= 90) return '#D97706';
   return '#DC2626';
 };
 
-const getHRColor = (val) => {
+const getHRColor = (val, age) => {
   const v = parseInt(val);
-  if (!v) return '#94A3B8';
-  if (v >= 60 && v <= 100) return '#16A34A';
-  if (v > 130) return '#DC2626';
+  const a = parseInt(age) || 30;
+  if (isNaN(v) || v === 0) return '#94A3B8';
+  if (v < 30 || v > 220) return '#DC2626'; // extreme/invalid
+  
+  let normalMin = 60, normalMax = 100, high = 130;
+  if (a <= 2) { normalMin = 100; normalMax = 160; high = 180; }
+  else if (a <= 10) { normalMin = 70; normalMax = 120; high = 140; }
+  
+  if (v >= normalMin && v <= normalMax) return '#16A34A';
+  if (v > high || v < normalMin - 10) return '#DC2626';
   return '#D97706';
+};
+
+const getHRRangeText = (age) => {
+  const a = parseInt(age) || 30;
+  if (a <= 2) return '100–160 bpm normal';
+  if (a <= 10) return '70–120 bpm normal';
+  return '60–100 bpm normal';
+};
+
+const getTempRangeText = (age, unit = 'C') => {
+  const a = parseInt(age) || 30;
+  const maxC = a <= 3 ? 37.5 : 37.2;
+  if (unit === 'F') {
+    return `97.0–${(maxC * 9/5 + 32).toFixed(1)}°F normal`;
+  }
+  return `36.1–${maxC}°C normal`;
 };
 
 export default function HardwarePage() {
@@ -36,8 +66,9 @@ export default function HardwarePage() {
 
   const [activeTab, setActiveTab] = useState('manual'); // 'fetch' | 'manual'
   const [fetchStatus, setFetchStatus] = useState('idle'); // idle | connecting | success | error
+  const [tempUnit, setTempUnit] = useState('C');
   const [vitals, setVitals] = useState({
-    temperature_c: '',
+    temperature: '',
     spo2: '',
     humidity: '50',
     heart_rate: '',
@@ -54,12 +85,32 @@ export default function HardwarePage() {
     const fetchGeo = async () => {
       setGeoContext(prev => ({ ...prev, status: 'fetching' }));
       try {
-        // Use IP-based geolocation to bypass browser permission popups and ensure it works locally
-        const geoRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
-        const geoData = await geoRes.json();
-        const lat = parseFloat(geoData.latitude);
-        const lng = parseFloat(geoData.longitude);
-        const city = geoData.city || 'your region';
+        // Fallback chain for IP Geolocation to bypass adblockers
+        let lat, lng, city;
+        try {
+          const res = await fetch('https://ipapi.co/json/');
+          const data = await res.json();
+          if (data.error) throw new Error("ipapi error");
+          lat = parseFloat(data.latitude);
+          lng = parseFloat(data.longitude);
+          city = data.city;
+        } catch (e1) {
+          try {
+            const res2 = await fetch('https://ipwho.is/');
+            const data2 = await res2.json();
+            if (!data2.success) throw new Error("ipwhois error");
+            lat = parseFloat(data2.latitude);
+            lng = parseFloat(data2.longitude);
+            city = data2.city;
+          } catch (e2) {
+            const res3 = await fetch('https://get.geojs.io/v1/ip/geo.json');
+            const data3 = await res3.json();
+            lat = parseFloat(data3.latitude);
+            lng = parseFloat(data3.longitude);
+            city = data3.city;
+          }
+        }
+        city = city || 'your region';
         
         const absLat = Math.abs(lat);
         let zone = 'temperate';
@@ -68,15 +119,17 @@ export default function HardwarePage() {
         else if (absLat <= 60) zone = 'temperate';
         else zone = 'arid';
         
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m`);
         const data = await res.json();
         
         setGeoContext({
-          ambient_temp_c: data.current_weather.temperature,
+          ambient_temp_c: data.current.temperature_2m,
+          humidity: data.current.relative_humidity_2m,
           location_zone: zone,
           city: city,
           status: 'success'
         });
+        setVitals(v => ({ ...v, humidity: data.current.relative_humidity_2m?.toString() || '50' }));
       } catch (err) {
         setGeoContext(prev => ({ ...prev, status: 'error' }));
       }
@@ -86,18 +139,35 @@ export default function HardwarePage() {
 
   const updateVital = (key, val) => setVitals(v => ({ ...v, [key]: val }));
 
+  const toggleTempUnit = () => {
+    if (!vitals.temperature) {
+      setTempUnit(prev => prev === 'C' ? 'F' : 'C');
+      return;
+    }
+    let currentTemp = parseFloat(vitals.temperature);
+    if (tempUnit === 'C') {
+      setVitals(v => ({ ...v, temperature: ((currentTemp * 9/5) + 32).toFixed(1) }));
+      setTempUnit('F');
+    } else {
+      setVitals(v => ({ ...v, temperature: ((currentTemp - 32) * 5/9).toFixed(1) }));
+      setTempUnit('C');
+    }
+  };
+
   const handleFetch = async () => {
     setFetchStatus('connecting');
     try {
-      const ESP32_URL = import.meta.env.VITE_ESP32_ENDPOINT || 'http://192.168.1.1/sensors';
-      const response = await fetch(ESP32_URL, { signal: AbortSignal.timeout(8000) });
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${BACKEND_URL}/sensors/latest`, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error('Data stale or device not connected');
       const data = await response.json();
-      setVitals({
-        temperature_c: data.temperature_c?.toString() || '',
-        spo2: data.spo2_percent?.toString() || '',
-        humidity: data.humidity_percent?.toString() || '50',
-        heart_rate: data.heart_rate_bpm?.toString() || '',
-      });
+      setTempUnit('C');
+      setVitals(v => ({
+        ...v,
+        temperature: data.temperature_c?.toString() || '',
+        spo2: data.spo2?.toString() || '',
+        heart_rate: data.heart_rate?.toString() || '',
+      }));
       setFetchStatus('success');
     } catch {
       setFetchStatus('error');
@@ -106,12 +176,15 @@ export default function HardwarePage() {
   };
 
   const handleContinue = () => {
-    navigate('/scan/ppg', {
+    let finalTempC = parseFloat(vitals.temperature);
+    if (tempUnit === 'F') finalTempC = (finalTempC - 32) * 5 / 9;
+    
+    navigate('/analyzing', {
       state: {
         medicalHistory,
         questionnaire,
         vitals: {
-          temperature_c: parseFloat(vitals.temperature_c),
+          temperature_c: finalTempC,
           heart_rate: parseInt(vitals.heart_rate),
           spo2: parseInt(vitals.spo2),
           humidity: parseFloat(vitals.humidity) || 50,
@@ -123,12 +196,18 @@ export default function HardwarePage() {
     });
   };
 
-  const isValid = vitals.temperature_c && vitals.spo2 && vitals.heart_rate;
+  const isValid = (() => {
+    let temp = parseFloat(vitals.temperature);
+    if (tempUnit === 'F') temp = (temp - 32) * 5 / 9;
+    const hr = parseInt(vitals.heart_rate);
+    const sp = parseInt(vitals.spo2);
+    return temp >= 35 && temp <= 43 && hr >= 30 && hr <= 220 && sp >= 70 && sp <= 100;
+  })();
 
   return (
     <div className="pb-8">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+        <button onClick={() => navigate(-1, { state: { medicalHistory, questionnaire } })} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
           <ArrowLeft size={18} color="#64748B" />
         </button>
         <div>
@@ -212,10 +291,10 @@ export default function HardwarePage() {
                 <span className="text-sm font-medium" style={{ color: '#16A34A' }}>Data received successfully</span>
               </div>
               {[
-                { label: 'Body Temperature', value: vitals.temperature_c, unit: '°C', icon: Thermometer, color: getTemperatureColor(vitals.temperature_c) },
+                { label: 'Body Temperature', value: vitals.temperature, unit: '°C', icon: Thermometer, color: getTemperatureColor(vitals.temperature, questionnaire.age, 'C') },
                 { label: 'Blood Oxygen (SpO2)', value: vitals.spo2, unit: '%', icon: Droplets, color: getSpo2Color(vitals.spo2) },
                 { label: 'Ambient Humidity', value: vitals.humidity, unit: '%', icon: Wind, color: '#64748B' },
-                { label: 'Heart Rate', value: vitals.heart_rate, unit: 'bpm', icon: Activity, color: getHRColor(vitals.heart_rate) },
+                { label: 'Heart Rate', value: vitals.heart_rate, unit: 'bpm', icon: Activity, color: getHRColor(vitals.heart_rate, questionnaire.age) },
               ].map((item, i) => (
                 <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} className="card flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${item.color}15` }}>
@@ -243,10 +322,9 @@ export default function HardwarePage() {
       {activeTab === 'manual' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           {[
-            { key: 'temperature_c', label: 'Body Temperature', unit: '°C', placeholder: 'e.g. 38.5', step: '0.1', range: '36.1–37.2°C normal', color: getTemperatureColor(vitals.temperature_c), icon: Thermometer },
+            { key: 'temperature', label: 'Body Temperature', unit: `°${tempUnit}`, placeholder: tempUnit === 'C' ? 'e.g. 38.5' : 'e.g. 101.3', step: '0.1', range: getTempRangeText(questionnaire.age, tempUnit), color: getTemperatureColor(vitals.temperature, questionnaire.age, tempUnit), icon: Thermometer },
             { key: 'spo2', label: 'Blood Oxygen (SpO2)', unit: '%', placeholder: 'e.g. 97', step: '1', range: '95–100% normal', color: getSpo2Color(vitals.spo2), icon: Droplets },
-            { key: 'humidity', label: 'Ambient Humidity', unit: '%', placeholder: 'e.g. 50', step: '1', range: '30–60% comfortable', color: '#64748B', icon: Wind },
-            { key: 'heart_rate', label: 'Heart Rate', unit: 'bpm', placeholder: 'e.g. 85', step: '1', range: '60–100 bpm normal', color: getHRColor(vitals.heart_rate), icon: Activity },
+            { key: 'heart_rate', label: 'Heart Rate', unit: 'bpm', placeholder: 'e.g. 85', step: '1', range: getHRRangeText(questionnaire.age), color: getHRColor(vitals.heart_rate, questionnaire.age), icon: Activity },
           ].map((field, i) => (
             <motion.div key={field.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="card">
               <div className="flex items-center gap-3 mb-3">
@@ -267,7 +345,13 @@ export default function HardwarePage() {
                   className="input-field flex-1"
                   placeholder={field.placeholder}
                 />
-                <span className="text-sm font-medium px-3" style={{ color: '#64748B' }}>{field.unit}</span>
+                {field.key === 'temperature' ? (
+                  <button onClick={toggleTempUnit} className="text-sm font-bold px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 transition-colors hover:bg-gray-100" style={{ color: '#0F172A' }}>
+                    °{tempUnit} ⇄
+                  </button>
+                ) : (
+                  <span className="text-sm font-medium px-3" style={{ color: '#64748B' }}>{field.unit}</span>
+                )}
               </div>
               {vitals[field.key] && (
                 <div className="flex items-center gap-1.5 mt-2">
@@ -288,7 +372,7 @@ export default function HardwarePage() {
           disabled={!isValid && fetchStatus !== 'success'}
           className="btn-primary"
         >
-          Continue to Pulse Scan <ChevronRight size={18} />
+          Analyze Data <ChevronRight size={18} />
         </button>
       </div>
     </div>

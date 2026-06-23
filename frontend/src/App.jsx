@@ -5,13 +5,13 @@ import Auth from './pages/Auth';
 import MedicalHistory from './pages/MedicalHistory';
 import Questionnaire from './pages/Questionnaire';
 import HardwarePage from './pages/HardwarePage';
-import CameraPPG from './pages/CameraPPG';
 import AnalyzingPage from './pages/AnalyzingPage';
 import Results from './pages/Results';
 import DoctorDashboard from './pages/DoctorDashboard';
 import Profile from './pages/Profile';
 import TrendsPage from './pages/TrendsPage';
 import NearbyDoctors from './pages/NearbyDoctors';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { useAuth } from './context/AuthContext';
 
@@ -75,20 +75,21 @@ function App() {
         </header>
 
         <main className="flex-1 max-w-lg w-full mx-auto px-5 py-5 pb-24">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/scan/medical-history" element={<MedicalHistory />} />
-            <Route path="/scan/questionnaire" element={<Questionnaire />} />
-            <Route path="/scan/hardware" element={<HardwarePage />} />
-            <Route path="/scan/ppg" element={<CameraPPG />} />
-            <Route path="/analyzing" element={<AnalyzingPage />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/doctor" element={<DoctorDashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/trends" element={<TrendsPage />} />
-            <Route path="/nearby-doctors" element={<NearbyDoctors />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/scan/medical-history" element={<MedicalHistory />} />
+              <Route path="/scan/questionnaire" element={<Questionnaire />} />
+              <Route path="/scan/hardware" element={<HardwarePage />} />
+              <Route path="/analyzing" element={<AnalyzingPage />} />
+              <Route path="/results" element={<Results />} />
+              <Route path="/doctor" element={<DoctorDashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/trends" element={<TrendsPage />} />
+              <Route path="/nearby-doctors" element={<NearbyDoctors />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
 
         <BottomNav />

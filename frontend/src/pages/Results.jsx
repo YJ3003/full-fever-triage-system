@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { ShieldAlert, CheckCircle, AlertTriangle, AlertOctagon, Siren, Activity, Thermometer, Heart, Droplets, Wind, Info, MapPin, ArrowLeft, ChevronRight, TrendingUp, FileText } from 'lucide-react';
 
@@ -29,23 +30,7 @@ export default function Results() {
   const sortedPatterns = Object.entries(result.pattern_confidence || {}).sort((a, b) => b[1] - a[1]);
   const topPattern = sortedPatterns[0] || ['Unknown', 0];
 
-  const parseMarkdown = (text) => {
-    if (!text) return null;
-    const lines = text.split('\n');
-    return lines.map((line, i) => {
-      const parts = line.split(/(\*\*.*?\*\*)/g);
-      return (
-        <p key={i} className={`text-sm leading-relaxed ${line.trim().startsWith('1.') || line.trim().startsWith('2.') || line.trim().startsWith('3.') || line.trim().startsWith('4.') ? 'mt-4 mb-1' : 'mb-1'}`} style={{ color: '#475569' }}>
-          {parts.map((part, j) => {
-            if (part.startsWith('**') && part.endsWith('**')) {
-              return <strong key={j} style={{ color: '#0F172A' }}>{part.slice(2, -2)}</strong>;
-            }
-            return part;
-          })}
-        </p>
-      );
-    });
-  };
+  // Removed manual markdown parsing in favor of react-markdown
 
   // Symptom Burden
   const symptomScores = questionnaire?.symptoms || {};
@@ -61,6 +46,9 @@ export default function Results() {
   else if (vitals?.spo2 <= 94) alerts.push({ level: 'moderate', message: 'Below normal oxygen saturation. Doctor consultation advised.' });
   if (vitals?.temperature_c > 39.5) alerts.push({ level: 'critical', message: 'Very high fever detected. Seek immediate medical attention.' });
   if (vitals?.heart_rate > 130) alerts.push({ level: 'critical', message: 'Significantly elevated heart rate. Emergency evaluation recommended.' });
+  if (Array.isArray(result?.warnings) && result.warnings.length > 0) {
+    result.warnings.forEach(w => alerts.push({ level: 'moderate', message: w }));
+  }
 
   return (
     <div className="space-y-5 pb-8">
@@ -143,8 +131,14 @@ export default function Results() {
             <p className="text-xs" style={{ color: '#3B82F6' }}>Generated Clinical Reasoning</p>
           </div>
         </div>
-        <div className="ai-report-content">
-          {parseMarkdown(result.ai_explanation) || (
+        <div className="ai-report-content px-4 pb-4">
+          {result.ai_explanation ? (
+            <div className="prose prose-sm max-w-none prose-slate">
+              <ReactMarkdown>
+                {result.ai_explanation}
+              </ReactMarkdown>
+            </div>
+          ) : (
             <p className="text-sm text-gray-500">Analysis could not be generated. Please consult a doctor.</p>
           )}
         </div>

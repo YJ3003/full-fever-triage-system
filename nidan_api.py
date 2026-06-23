@@ -14,6 +14,7 @@ Then open:
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Optional, List
 import joblib
 import numpy as np
@@ -21,7 +22,6 @@ import pandas as pd
 import os
 import traceback
 from fastapi.middleware.cors import CORSMiddleware
-import motor.motor_asyncio
 from google import genai
 from dotenv import load_dotenv
 import asyncio
@@ -48,11 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# MongoDB Setup
-mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri)
-db = client.nidan_ai
 
 # Gemini Setup
 gemini_key = os.getenv("GEMINI_API_KEY")
@@ -128,6 +123,8 @@ class TriageInput(BaseModel):
     dark_urine:        int = Field(0, ge=0, le=3, description="Dark or less frequent urine")
     stomach_pain:      int = Field(0, ge=0, le=3, description="Stomach pain or nausea")
     bleeding_tendency: int = Field(0, ge=0, le=3, description="Bleeding gums, nose bleeds, easy bruising")
+    diarrhea:          int = Field(0, ge=0, le=3, description="Diarrhea or loose stools")
+    ear_pain:          int = Field(0, ge=0, le=3, description="Ear pain or pulling at ears")
 
     # Geo-aware fields
     ambient_temp_c: Optional[float] = Field(None, description="Ambient temperature in Celsius")
@@ -135,6 +132,17 @@ class TriageInput(BaseModel):
 
     # Pediatric fields
     recent_vaccination: bool = Field(False, description="Whether the pediatric patient had a recent vaccination")
+
+    # Special Clinical Conditions (MTS Edge Cases)
+    is_pregnant:          bool = Field(False, description="Patient is pregnant")
+    is_immunocompromised: bool = Field(False, description="Patient is immunocompromised (chemo, HIV, transplant)")
+
+    # Home Triage Red Flags
+    unusually_drowsy: bool = Field(False, description="Red Flag: Altered mental state")
+    struggling_to_breathe: bool = Field(False, description="Red Flag: Respiratory distress")
+    severe_dehydration: bool = Field(False, description="Red Flag: Refusing fluids")
+    seizures: bool = Field(False, description="Red Flag: Seizures or convulsions")
+    stiff_neck: bool = Field(False, description="Red Flag: Stiff neck")
 
     model_config = {
         "json_schema_extra": {
@@ -168,6 +176,7 @@ class TriageOutput(BaseModel):
     recommendation:      str
     ai_explanation:      Optional[str] = None
     input_summary:       dict
+    warnings:            Optional[List[str]] = []
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -189,6 +198,12 @@ def build_feature_row(inp: TriageInput, feature_list: list) -> pd.DataFrame:
         "Rigors":              1 if inp.rigors > 0 else 0,
         "Sweating":            1 if inp.sweating > 0 else 0,
         "Travel_History":      1 if inp.travel_history > 0 else 0,
+        "Petechiae":           1 if inp.petechiae > 0 else 0,
+        "Retroorbital_Pain":   1 if inp.retroorbital_pain > 0 else 0,
+        "Cyclical_Fever":      1 if inp.cyclical_fever > 0 else 0,
+        "Dark_Urine":          1 if inp.dark_urine > 0 else 0,
+        "Stomach_Pain":        1 if inp.stomach_pain > 0 else 0,
+        "Bleeding_Tendency":   1 if inp.bleeding_tendency > 0 else 0,
     }
     return pd.DataFrame([raw], columns=feature_list)
 
@@ -202,25 +217,57 @@ def top_features(model, feature_list: list, n: int = 3) -> list:
 async def generate_ai_explanation(inp: TriageInput, risk_label: str, pat_label: str) -> str:
     if not gemini_client:
         return "AI reasoning unavailable. Please consult a doctor."
+    active_symptoms = [
+        f"{name}({getattr(inp, field)})" 
+        for name, field in [
+            ("Headache", "headache"), ("Cough", "cough"), ("Vomiting", "vomiting"),
+            ("Myalgia", "myalgia"), ("Rash", "rash"), ("Rigors", "rigors"),
+            ("Sweating", "sweating"), ("Travel", "travel_history"),
+            ("Petechiae", "petechiae"), ("Retroorbital Pain", "retroorbital_pain"),
+            ("Cyclical Fever", "cyclical_fever"), ("Dark Urine", "dark_urine"),
+            ("Stomach Pain", "stomach_pain"), ("Bleeding Tendency", "bleeding_tendency"),
+            ("Diarrhea", "diarrhea"), ("Ear Pain", "ear_pain")
+        ]
+        if getattr(inp, field, 0) > 0
+    ]
+    symptom_str = ", ".join(active_symptoms) if active_symptoms else "None reported"
+
+    red_flags = [
+        name for name, field in [
+            ("Unusually Drowsy", "unusually_drowsy"), ("Struggling to Breathe", "struggling_to_breathe"),
+            ("Severe Dehydration", "severe_dehydration"), ("Seizures", "seizures"), ("Stiff Neck", "stiff_neck")
+        ]
+        if getattr(inp, field, False)
+    ]
+    red_flag_str = ", ".join(red_flags) if red_flags else "None"
+
     prompt = f"""
-    Act as a professional medical triage AI for a system called NIDAN-AI.
-    Patient details: Age {inp.age}, Fever for {inp.fever_days} days. Climate Zone: {inp.location_zone}.
-    Pediatric Vaccination Status: {'Yes (Within 48hrs)' if inp.recent_vaccination else 'No/Not Applicable'}.
-    Medical History: {inp.medical_history or 'None provided'}.
-    Vitals: Temp {inp.temperature_c}C (ambient: {inp.ambient_temp_c or 'unknown'}C), HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
-    Core Symptoms severity (0-3): Headache({inp.headache}), Cough({inp.cough}), Vomiting({inp.vomiting}), Myalgia({inp.myalgia}), Rash({inp.rash}), Rigors({inp.rigors}), Sweating({inp.sweating}), Travel({inp.travel_history}).
-    Differential Symptoms (0-3): Petechiae({inp.petechiae}), Retroorbital Pain({inp.retroorbital_pain}), Cyclical Fever({inp.cyclical_fever}), Dark Urine({inp.dark_urine}), Stomach Pain({inp.stomach_pain}), Bleeding Tendency({inp.bleeding_tendency}).
+    Act as a highly insightful clinical triage AI for NIDAN-AI.
+    Patient: {inp.age}yo {inp.gender or 'Patient'}. Fever: {inp.fever_days} days. Climate: {inp.location_zone} (Ambient {inp.ambient_temp_c or 'N/A'}C).
+    Medical History: {inp.medical_history or 'None'}.
+    Pediatric Vaccination: {'Yes (Within 48hrs)' if inp.recent_vaccination else 'No'}.
+    Vitals: Temp {inp.temperature_c}C, HR {inp.heart_rate}bpm, SpO2 {inp.spo2}%.
+    Symptoms: {symptom_str}
+    Red Flags: {red_flag_str}
     
-    The ML model has classified the risk level as '{risk_label}' and the suspected infection pattern as '{pat_label}'.
+    The ML model predicts Risk Level: '{risk_label}' and Infection Pattern: '{pat_label}'.
     
-    Task: Write a highly detailed, professional clinical reasoning report (Explainable AI Analysis) explaining exactly *why* this classification was reached. Format the response in Markdown.
-    Include the following sections:
-    1. **Primary Clinical Assessment**: A summary of the risk level ({risk_label}) and the primary suspected fever pattern ({pat_label}).
-    2. **Vital Signs & Geo-Calibration**: Deeply analyze the provided vitals. Note that the patient is in a {inp.location_zone} climate with an ambient temperature of {inp.ambient_temp_c}C. Explicitly explain how this geographic location and ambient heat alters their baseline fever expectation (e.g., in tropical climates, core temperatures naturally run slightly higher, preventing false alarms). If the patient had a recent pediatric vaccination, explicitly weigh this as a highly likely cause for the fever.
-    3. **Symptomatic Evidence**: Analyze the specific combination of symptoms. Deeply analyze the 'Differential Symptoms' which are highly specific markers for tropical diseases (e.g., retroorbital pain/petechiae/bleeding for Dengue, cyclical fever/rigors/dark urine for Malaria, step-ladder fever for Typhoid). Link these precisely to the suspected pattern.
-    4. **Recommendations & Precautions**: Actionable medical advice based on this specific profile.
+    Task: Write a BRIEF, highly insightful, and punchy Explainable AI (XAI) clinical report.
+    Use Markdown. Do NOT write a wall of text. Keep it strictly to the essential clinical takeaways.
+    Use this exact structure:
     
-    Be thorough, clinical, but accessible. Do not mention that you are an AI or Gemini. Act as the clinical reasoning engine. Do not provide a definitive medical diagnosis, refer to it as a "probabilistic triage assessment".
+    ### 🎯 Key Insight
+    (1-2 sentences summarizing the most critical clinical takeaway based on their vitals and symptoms)
+    
+    ### 🌡️ Vitals & Geo-Context
+    * (1 bullet point explaining if vitals are normal/abnormal)
+    * (1 bullet point factoring in their {inp.location_zone} climate and ambient temperature)
+    
+    ### 🔬 Symptom Analysis
+    * (1-2 bullet points explaining how the combination of their specific symptoms points to {pat_label})
+    
+    ### 💡 Actionable Advice
+    * (3 short bulleted recommendations)
     """
     try:
         def call_gemini():
@@ -236,7 +283,7 @@ async def generate_ai_explanation(inp: TriageInput, risk_label: str, pat_label: 
         return "AI Analysis timed out due to high API load or rate limits. Please try running another scan in a few minutes."
     except Exception as e:
         print(f"Gemini error: {e}")
-        return "Explanation could not be generated due to an API error. Please try again."
+        return f"Explanation could not be generated due to an API error: {e}"
 
 def normalize_body_temperature(body_temp_c: float, ambient_temp_c: Optional[float], location_zone: str) -> float:
     ZONE_BASELINE_OFFSET = {
@@ -270,23 +317,90 @@ async def run_prediction(inp: TriageInput) -> TriageOutput:
     risk_proba      = risk_model.predict_proba(row)[0]
     risk_confidence = {risk_enc.classes_[i]: round(float(p), 3) for i, p in enumerate(risk_proba)}
 
-    # Pediatric Vaccination Override
-    if inp.recent_vaccination and inp.age <= 12:
+    # ─── DETERMINISTIC CLINICAL RULES ENGINE ───
+    
+    # NEW: Home Triage Red Flags & Age-Stratified Vitals
+    is_critical_override = False
+    
+    if inp.unusually_drowsy or inp.struggling_to_breathe or inp.severe_dehydration or inp.seizures or inp.stiff_neck:
+        is_critical_override = True
+    elif inp.spo2 < 93:
+        is_critical_override = True
+    elif inp.age <= 2 and inp.heart_rate > 180:
+        is_critical_override = True
+    elif 2 < inp.age <= 10 and inp.heart_rate > 140:
+        is_critical_override = True
+    elif inp.age > 10 and inp.heart_rate > 130:
+        is_critical_override = True
+    elif inp.age <= 1 and (inp.temperature_c < 36.0 or inp.temperature_c >= 39.0):
+        is_critical_override = True
+    elif inp.age == 0 and inp.temperature_c >= 38.0:
+        is_critical_override = True  # Neonatal fever (MTS guideline)
+    elif inp.age > 65 and inp.temperature_c < 35.5:
+        is_critical_override = True
+    elif inp.is_immunocompromised and (inp.temperature_c >= 37.8 or inp.temperature_c <= 36.0):
+        is_critical_override = True  # Neutropenic sepsis risk (MTS guideline)
+    elif inp.is_pregnant and inp.temperature_c >= 38.5:
+        is_critical_override = True  # Severe pregnancy fever (MTS guideline)
+
+    if is_critical_override:
+        risk_label = "Critical"
+        risk_confidence = {"Critical": 0.99, "High": 0.01, "Moderate": 0.0, "Low": 0.0}
+
+    # Rule 1: Infant High Fever with NO vaccination is very risky (Sepsis risk)
+    elif inp.age <= 2 and inp.temperature_c >= 38.0 and not inp.recent_vaccination:
+        risk_label = "Critical"
+        risk_confidence = {"Critical": 0.99, "High": 0.01, "Moderate": 0.0, "Low": 0.0}
+
+    # Rule 2: Infant Fever WITH recent vaccination is an expected symptom (Low risk)
+    elif inp.age <= 2 and inp.temperature_c >= 38.0 and inp.recent_vaccination:
+        risk_label = "Low" if inp.temperature_c < 39.5 else "Moderate"
+        risk_confidence = {"Low": 0.90, "Moderate": 0.10, "High": 0.0, "Critical": 0.0}
+        pat_label = "Post-Vaccination Immune Response"
+        pat_confidence = {pat_label: 0.95}
+
+    # Rule 3: General Pediatric Vaccination Override (older kids up to 12)
+    elif inp.recent_vaccination and inp.age <= 12:
         if risk_label in ["High", "Moderate"]:
             risk_label = "Low" if risk_label == "Moderate" else "Moderate"
             if risk_label in risk_confidence:
                 risk_confidence[risk_label] = 0.85
 
     # Model 2 — infection pattern
-    pat_pred_idx   = pattern_model.predict(row)[0]
-    pat_label      = pattern_enc.inverse_transform([pat_pred_idx])[0]
-    pat_proba      = pattern_model.predict_proba(row)[0]
-    pat_confidence = {pattern_enc.classes_[i]: round(float(p), 3) for i, p in enumerate(pat_proba)}
+    if not (inp.recent_vaccination and inp.age <= 2 and inp.temperature_c >= 38.0):
+        pat_pred_idx   = pattern_model.predict(row)[0]
+        pat_label      = pattern_enc.inverse_transform([pat_pred_idx])[0]
+        pat_proba      = pattern_model.predict_proba(row)[0]
+        pat_confidence = {pattern_enc.classes_[i]: round(float(p), 3) for i, p in enumerate(pat_proba)}
+
+    # ─── WHO SYNDROMIC TRIAGE ENGINE ───
+    if inp.retroorbital_pain > 0 and (inp.myalgia > 1 or inp.rash > 0 or inp.petechiae > 0):
+        pat_label = "Dengue-like (Probable)"
+        pat_confidence = {pat_label: 0.92, "Viral-like": 0.08}
+        if risk_label == "Low": 
+            risk_label = "Moderate"
+            risk_confidence = {"Moderate": 0.85, "High": 0.15}
+    elif inp.cyclical_fever > 0 and inp.rigors > 0:
+        pat_label = "Malaria-like (Probable)"
+        pat_confidence = {pat_label: 0.90, "Bacterial-like": 0.10}
+        if risk_label == "Low": 
+            risk_label = "Moderate"
+            risk_confidence = {"Moderate": 0.85, "High": 0.15}
+    elif inp.fever_days > 4 and inp.stomach_pain > 0 and inp.headache > 0:
+        pat_label = "Typhoid-like (Probable)"
+        pat_confidence = {pat_label: 0.88, "Bacterial-like": 0.12}
+        if risk_label == "Low": 
+            risk_label = "Moderate"
+            risk_confidence = {"Moderate": 0.85, "High": 0.15}
 
     top_feats = top_features(risk_model, feature_list, n=3)
     
     ai_explanation = await generate_ai_explanation(inp, risk_label, pat_label)
     
+    warnings = []
+    if "API error" in ai_explanation or "timed out" in ai_explanation.lower():
+        warnings.append("Gemini API Error: " + ai_explanation)
+
     output = TriageOutput(
         risk_level         = risk_label,
         risk_confidence    = risk_confidence,
@@ -315,18 +429,50 @@ async def run_prediction(inp: TriageInput) -> TriageOutput:
                 "ambient_temp_c": inp.ambient_temp_c,
                 "location_zone": inp.location_zone
             }
-        }
+        },
+        warnings=warnings
     )
     
-    try:
-        # Save to DB
-        await db.reports.insert_one(output.model_dump())
-    except Exception as e:
-        print(f"MongoDB save error: {e}")
-
     return output
 
 # ─── ROUTES ───────────────────────────────────────────────────────────────────
+
+# Global store for latest sensor reading
+LATEST_SENSOR_DATA = {
+    "temperature_c": None,
+    "spo2": None,
+    "heart_rate": None,
+    "timestamp": None
+}
+
+class SensorUpdateInput(BaseModel):
+    temperature_c: float
+    spo2: int
+    heart_rate: int
+
+@app.post("/sensors/update", summary="Receive data from ESP8266")
+def update_sensors(data: SensorUpdateInput):
+    LATEST_SENSOR_DATA["temperature_c"] = data.temperature_c
+    LATEST_SENSOR_DATA["spo2"] = data.spo2
+    LATEST_SENSOR_DATA["heart_rate"] = data.heart_rate
+    LATEST_SENSOR_DATA["timestamp"] = datetime.now()
+    return {"status": "ok"}
+
+@app.get("/sensors/latest", summary="Get latest ESP8266 data")
+def get_latest_sensors():
+    if not LATEST_SENSOR_DATA["timestamp"]:
+        raise HTTPException(status_code=404, detail="No sensor data received yet.")
+    
+    # Check if data is stale (> 30 seconds)
+    delta = datetime.now() - LATEST_SENSOR_DATA["timestamp"]
+    if delta.total_seconds() > 30:
+        raise HTTPException(status_code=408, detail="Sensor data is stale. Is device connected?")
+    
+    return {
+        "temperature_c": LATEST_SENSOR_DATA["temperature_c"],
+        "spo2": LATEST_SENSOR_DATA["spo2"],
+        "heart_rate": LATEST_SENSOR_DATA["heart_rate"]
+    }
 
 @app.get("/health", summary="Model health check")
 def health():

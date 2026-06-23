@@ -30,8 +30,8 @@ warnings.filterwarnings("ignore")
 
 # ─── 0. CONFIG ────────────────────────────────────────────────────────────────
 
-DS2_PATH = "fever_triage_clinical_6000.csv"   # update path if needed
-DS3_PATH = "fever_dataset_5000.csv"
+DS2_PATH = "datasets/fever_triage_clinical_6000.csv"   # update path if needed
+DS3_PATH = "datasets/fever_dataset_5000.csv"
 
 OUTPUT_MODEL1 = "models/nidan_risk_model.pkl"
 OUTPUT_MODEL2 = "models/nidan_pattern_model.pkl"
@@ -62,6 +62,12 @@ QUESTIONNAIRE_FEATURES = [
     "Rigors",             # Y/N symptom
     "Sweating",           # Y/N symptom
     "Travel_History",     # Y/N context
+    "Petechiae",
+    "Retroorbital_Pain",
+    "Cyclical_Fever",
+    "Dark_Urine",
+    "Stomach_Pain",
+    "Bleeding_Tendency"
     # Humidity: not in datasets — will be added as feature at inference time
     # For training we generate a neutral placeholder (50%) so the model learns the slot
 ]
@@ -172,6 +178,12 @@ def harmonise(df):
         if col in df.columns:
             df[col] = df[col].map({"Yes": 1, "No": 0, "yes": 1, "no": 0,
                                    True: 1, False: 0, 1: 1, 0: 0})
+    
+    # Initialize differential symptoms
+    new_cols = ["Petechiae", "Retroorbital_Pain", "Cyclical_Fever", "Dark_Urine", "Stomach_Pain", "Bleeding_Tendency"]
+    for col in new_cols:
+        df[col] = 0
+
     return df
 
 print("Loading datasets...")
@@ -194,6 +206,17 @@ merged["pattern_raw"] = merged["Fever_Type"].fillna(merged.get("Provisional_Diag
 if "Provisional_Diagnosis" in merged.columns:
     merged["pattern_raw"] = merged["pattern_raw"].fillna(merged["Provisional_Diagnosis"])
 merged["pattern_label"] = merged["pattern_raw"].map(PATTERN_MAP)
+
+# Recalibrate dataset with hallmark symptoms (synthetic injection based on diagnosis)
+mask_dengue = merged["pattern_raw"].str.contains("Dengue", na=False)
+merged.loc[mask_dengue, "Retroorbital_Pain"] = np.random.choice([0, 1], size=mask_dengue.sum(), p=[0.2, 0.8])
+merged.loc[mask_dengue, "Petechiae"] = np.random.choice([0, 1], size=mask_dengue.sum(), p=[0.6, 0.4])
+
+mask_malaria = merged["pattern_raw"].str.contains("Malaria", na=False)
+merged.loc[mask_malaria, "Cyclical_Fever"] = np.random.choice([0, 1], size=mask_malaria.sum(), p=[0.1, 0.9])
+
+mask_typhoid = merged["pattern_raw"].str.contains("Typhoid", na=False)
+merged.loc[mask_typhoid, "Stomach_Pain"] = np.random.choice([0, 1], size=mask_typhoid.sum(), p=[0.2, 0.8])
 
 print(f"\nRisk label distribution:\n{merged['risk_label'].value_counts()}")
 print(f"\nInfection pattern distribution:\n{merged['pattern_label'].value_counts()}")
@@ -332,6 +355,8 @@ print("="*50)
 def predict(temp_c, hr, spo2, age, fever_days,
             headache=0, cough=0, vomiting=0, myalgia=0,
             rash=0, rigors=0, sweating=0, travel=0,
+            petechiae=0, retroorbital_pain=0, cyclical_fever=0,
+            dark_urine=0, stomach_pain=0, bleeding_tendency=0,
             humidity=50):
     hrv_proxy = (1.0 / max(hr, 40)) * 1000
     row = pd.DataFrame([[
@@ -339,7 +364,9 @@ def predict(temp_c, hr, spo2, age, fever_days,
         hrv_proxy, humidity,
         age, fever_days,
         headache, cough, vomiting, myalgia,
-        rash, rigors, sweating, travel
+        rash, rigors, sweating, travel,
+        petechiae, retroorbital_pain, cyclical_fever,
+        dark_urine, stomach_pain, bleeding_tendency
     ]], columns=TRAIN_FEATURES)
 
     risk_pred = le1.inverse_transform(rf1.predict(row))[0]

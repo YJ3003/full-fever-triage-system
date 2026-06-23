@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Activity, Brain, CheckCircle } from 'lucide-react';
@@ -17,8 +17,12 @@ export default function AnalyzingPage() {
   const navigate = useNavigate();
   const { saveScane } = useAuth();
   const [stageIndex, setStageIndex] = useState(0);
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     if (!state?.questionnaire || !state?.vitals) {
       navigate('/scan/medical-history');
       return;
@@ -65,6 +69,11 @@ export default function AnalyzingPage() {
           stomach_pain: q.symptoms?.stomach_pain || 0,
           bleeding_tendency: q.symptoms?.bleeding_tendency || 0,
           recent_vaccination: q.recent_vaccination || false,
+          unusually_drowsy: q.unusually_drowsy || false,
+          struggling_to_breathe: q.struggling_to_breathe || false,
+          severe_dehydration: q.severe_dehydration || false,
+          is_pregnant: q.is_pregnant || false,
+          is_immunocompromised: q.is_immunocompromised || false,
         };
 
         const API_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';

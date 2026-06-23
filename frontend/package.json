@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",
+    "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.2.4",
     "autoprefixer": "^10.5.0",
     "axios": "^1.16.0",
@@ -19,6 +20,7 @@
     "postcss": "^8.5.14",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.15.0",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.2.4"

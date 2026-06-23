@@ -4,19 +4,21 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, ChevronRight, Brain, Wind, AlertCircle, Zap, Layers, Snowflake, Droplets, MapPin, Eye, Activity, Heart } from 'lucide-react';
 
 const SYMPTOMS = [
-  { id: 'headache', icon: Brain, question: 'How severe is your headache?', description: 'Include any throbbing, pressure, or location-specific pain' },
-  { id: 'cough', icon: Wind, question: 'How severe is your cough?', description: 'Include dry cough, wet cough, or persistent coughing fits' },
-  { id: 'vomiting', icon: AlertCircle, question: 'Have you experienced vomiting or nausea?', description: 'Include frequency and intensity' },
-  { id: 'myalgia', icon: Zap, question: 'Are you experiencing body or muscle pain?', description: 'Include joint pain, body aches, or generalized soreness' },
-  { id: 'rash', icon: Layers, question: 'Have you noticed skin rash or red spots?', description: 'Include any unusual skin changes, spots, or irritation' },
-  { id: 'rigors', icon: Snowflake, question: 'Have you experienced chills or shivering?', description: 'Include sudden cold feelings despite high temperature' },
-  { id: 'sweating', icon: Droplets, question: 'Are you experiencing unusual sweating?', description: 'Include night sweats or excessive perspiration' },
-  { id: 'petechiae', icon: Layers, question: 'Do you have tiny red/purple spots on skin (petechiae)?', description: 'Small dot-like hemorrhages under the skin' },
-  { id: 'retroorbital_pain', icon: Eye, question: 'Is your headache behind your eyes?', description: 'Pain specifically located behind the eyes' },
-  { id: 'cyclical_fever', icon: Activity, question: 'Is the fever coming in regular waves?', description: 'Feeling fine in between fever spikes' },
-  { id: 'dark_urine', icon: Droplets, question: 'Have you noticed your urine is darker or less frequent?', description: 'Sign of potential dehydration or kidney stress' },
-  { id: 'stomach_pain', icon: AlertCircle, question: 'Do you have stomach or abdominal pain?', description: 'Any persistent dull or sharp pain' },
-  { id: 'bleeding_tendency', icon: Heart, question: 'Any bleeding gums, nose bleeds, or easy bruising?', description: 'Unusual bleeding tendencies' },
+  { id: 'headache', icon: Brain, question: 'Does the patient have a headache?', description: 'Throbbing, pressure, or general head pain', isSubjective: true },
+  { id: 'cough', icon: Wind, question: 'How severe is the patient\'s cough?', description: 'Dry, wet, or persistent coughing fits', isSubjective: false },
+  { id: 'vomiting', icon: AlertCircle, question: 'Does the patient have vomiting or nausea?', description: 'Frequency and intensity of throwing up', isSubjective: false },
+  { id: 'myalgia', icon: Zap, question: 'Does the patient have muscle or body aches?', description: 'Joint pain or generalized body soreness', isSubjective: true },
+  { id: 'rash', icon: Layers, question: 'Does the patient have a skin rash?', description: 'Unusual red skin changes or irritation', isSubjective: false },
+  { id: 'rigors', icon: Snowflake, question: 'Does the patient have severe chills or shivering?', description: 'Sudden cold feelings despite a high fever', isSubjective: false },
+  { id: 'sweating', icon: Droplets, question: 'Does the patient have unusual or heavy sweating?', description: 'Night sweats or excessive perspiration', isSubjective: false },
+  { id: 'petechiae', icon: Layers, question: 'Does the patient have tiny red/purple spots on skin?', description: 'Small dot-like marks that do not fade when pressed', isSubjective: false },
+  { id: 'retroorbital_pain', icon: Eye, question: 'Does the patient complain of pain behind the eyes?', description: 'A deep ache located behind the eyeballs', isSubjective: true },
+  { id: 'cyclical_fever', icon: Activity, question: 'Is the patient\'s fever coming in waves?', description: 'Feeling completely fine in between sudden fever spikes', isSubjective: false },
+  { id: 'dark_urine', icon: Droplets, question: 'Is the patient\'s urine very dark or infrequent?', description: 'Sign of potential dehydration', isSubjective: false },
+  { id: 'stomach_pain', icon: AlertCircle, question: 'Does the patient have stomach or abdominal pain?', description: 'Persistent dull or sharp pain in the belly', isSubjective: true },
+  { id: 'bleeding_tendency', icon: Heart, question: 'Does the patient bruise or bleed easily?', description: 'Bleeding gums, frequent nosebleeds, or unexplained bruises', isSubjective: false },
+  { id: 'diarrhea', icon: Droplets, question: 'Does the patient have diarrhea or loose stools?', description: 'Frequent watery bowel movements', isSubjective: false },
+  { id: 'ear_pain', icon: AlertCircle, question: 'Does the patient have ear pain or pull at their ears?', description: 'Signs of ear infection (common in kids)', isSubjective: false },
 ];
 
 const SEVERITY_OPTIONS = [
@@ -46,18 +48,25 @@ export default function Questionnaire() {
   const medicalHistory = state?.medicalHistory || {};
 
   const [step, setStep] = useState(1); // 1 = basic info, 2 = symptoms
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
-  
-  const [formData, setFormData] = useState({
+
+  const [formData, setFormData] = useState(state?.questionnaire || {
     age: '',
     gender: 'Male',
     fever_duration: 0,
     symptoms: SYMPTOMS.reduce((acc, s) => ({ ...acc, [s.id]: 0 }), {}),
     travel_history: 0,
     recent_vaccination: false,
+    unusually_drowsy: false,
+    struggling_to_breathe: false,
+    severe_dehydration: false,
+    seizures: false,
+    stiff_neck: false,
+    is_pregnant: false,
+    is_immunocompromised: false,
   });
 
   const updateSymptom = (id, val) => setFormData(f => ({ ...f, symptoms: { ...f.symptoms, [id]: val } }));
@@ -81,7 +90,7 @@ export default function Questionnaire() {
   return (
     <div className="pb-8">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => step > 1 ? setStep(1) : navigate(-1)} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+        <button onClick={() => step > 1 ? setStep(1) : navigate(-1, { state: { medicalHistory } })} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
           <ArrowLeft size={18} color="#64748B" />
         </button>
         <div>
@@ -121,20 +130,94 @@ export default function Questionnaire() {
             </motion.div>
           )}
 
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="card border-l-4" style={{ borderLeftColor: '#EF4444', background: '#FEF2F2' }}>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#991B1B' }}>🚨 Critical Red Flags</label>
+            <p className="text-xs mb-3" style={{ color: '#DC2626' }}>Please answer immediately. These indicate a potential emergency.</p>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium pr-2" style={{ color: '#7F1D1D' }}>Is the patient unusually drowsy, confused, or unresponsive?</span>
+                <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                  <div onClick={() => setFormData(f => ({ ...f, unusually_drowsy: true }))} className={`chip text-center py-1 px-1 ${formData.unusually_drowsy ? 'chip-selected' : 'chip-unselected'}`} style={formData.unusually_drowsy ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>Yes</div>
+                  <div onClick={() => setFormData(f => ({ ...f, unusually_drowsy: false }))} className={`chip text-center py-1 px-1 ${!formData.unusually_drowsy ? 'chip-selected' : 'chip-unselected'}`} style={!formData.unusually_drowsy ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>No</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium pr-2" style={{ color: '#7F1D1D' }}>Is the patient struggling to breathe or breathing very fast?</span>
+                <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                  <div onClick={() => setFormData(f => ({ ...f, struggling_to_breathe: true }))} className={`chip text-center py-1 px-1 ${formData.struggling_to_breathe ? 'chip-selected' : 'chip-unselected'}`} style={formData.struggling_to_breathe ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>Yes</div>
+                  <div onClick={() => setFormData(f => ({ ...f, struggling_to_breathe: false }))} className={`chip text-center py-1 px-1 ${!formData.struggling_to_breathe ? 'chip-selected' : 'chip-unselected'}`} style={!formData.struggling_to_breathe ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>No</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium pr-2" style={{ color: '#7F1D1D' }}>Is the patient refusing all fluids or had no urine for 8+ hours?</span>
+                <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                  <div onClick={() => setFormData(f => ({ ...f, severe_dehydration: true }))} className={`chip text-center py-1 px-1 ${formData.severe_dehydration ? 'chip-selected' : 'chip-unselected'}`} style={formData.severe_dehydration ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>Yes</div>
+                  <div onClick={() => setFormData(f => ({ ...f, severe_dehydration: false }))} className={`chip text-center py-1 px-1 ${!formData.severe_dehydration ? 'chip-selected' : 'chip-unselected'}`} style={!formData.severe_dehydration ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>No</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium pr-2" style={{ color: '#7F1D1D' }}>Has the patient had any seizures or convulsions?</span>
+                <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                  <div onClick={() => setFormData(f => ({ ...f, seizures: true }))} className={`chip text-center py-1 px-1 ${formData.seizures ? 'chip-selected' : 'chip-unselected'}`} style={formData.seizures ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>Yes</div>
+                  <div onClick={() => setFormData(f => ({ ...f, seizures: false }))} className={`chip text-center py-1 px-1 ${!formData.seizures ? 'chip-selected' : 'chip-unselected'}`} style={!formData.seizures ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>No</div>
+                </div>
+              </div>
+
+              {(!formData.age || parseInt(formData.age) > 3) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium pr-2" style={{ color: '#7F1D1D' }}>Does the patient have a stiff neck or inability to bend neck?</span>
+                  <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                    <div onClick={() => setFormData(f => ({ ...f, stiff_neck: true }))} className={`chip text-center py-1 px-1 ${formData.stiff_neck ? 'chip-selected' : 'chip-unselected'}`} style={formData.stiff_neck ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>Yes</div>
+                    <div onClick={() => setFormData(f => ({ ...f, stiff_neck: false }))} className={`chip text-center py-1 px-1 ${!formData.stiff_neck ? 'chip-selected' : 'chip-unselected'}`} style={!formData.stiff_neck ? { background: '#EF4444', color: 'white', borderColor: '#EF4444' } : {}}>No</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
           <div className="card">
             <label className="block text-sm font-semibold mb-2" style={{ color: '#0F172A' }}>Gender</label>
             <select
               value={formData.gender}
-              onChange={e => setFormData(f => ({ ...f, gender: e.target.value }))}
+              onChange={e => {
+                const newGender = e.target.value;
+                setFormData(f => ({ ...f, gender: newGender, is_pregnant: newGender === 'Female' ? f.is_pregnant : false }));
+              }}
               className="input-field"
               style={{ background: 'white' }}
             >
               <option>Male</option>
               <option>Female</option>
-              <option>Non-binary</option>
               <option>Prefer not to say</option>
             </select>
           </div>
+
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="card border-l-4" style={{ borderLeftColor: '#F59E0B', background: '#FFFBEB' }}>
+            <label className="block text-sm font-semibold mb-2" style={{ color: '#B45309' }}>⚠️ Special Clinical Conditions</label>
+            <p className="text-xs mb-3" style={{ color: '#D97706' }}>These factors significantly alter fever triage guidelines.</p>
+            <div className="space-y-3">
+              {formData.gender === 'Female' && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium pr-2" style={{ color: '#92400E' }}>Is the patient currently pregnant?</span>
+                  <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                    <div onClick={() => setFormData(f => ({ ...f, is_pregnant: true }))} className={`chip text-center py-1 px-1 ${formData.is_pregnant ? 'chip-selected' : 'chip-unselected'}`} style={formData.is_pregnant ? { background: '#F59E0B', color: 'white', borderColor: '#F59E0B' } : {}}>Yes</div>
+                    <div onClick={() => setFormData(f => ({ ...f, is_pregnant: false }))} className={`chip text-center py-1 px-1 ${!formData.is_pregnant ? 'chip-selected' : 'chip-unselected'}`} style={!formData.is_pregnant ? { background: '#F59E0B', color: 'white', borderColor: '#F59E0B' } : {}}>No</div>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium pr-2" style={{ color: '#92400E' }}>Is the patient immunocompromised (e.g., Chemo, Transplant, HIV)?</span>
+                <div className="grid grid-cols-2 gap-1 w-24 shrink-0">
+                  <div onClick={() => setFormData(f => ({ ...f, is_immunocompromised: true }))} className={`chip text-center py-1 px-1 ${formData.is_immunocompromised ? 'chip-selected' : 'chip-unselected'}`} style={formData.is_immunocompromised ? { background: '#F59E0B', color: 'white', borderColor: '#F59E0B' } : {}}>Yes</div>
+                  <div onClick={() => setFormData(f => ({ ...f, is_immunocompromised: false }))} className={`chip text-center py-1 px-1 ${!formData.is_immunocompromised ? 'chip-selected' : 'chip-unselected'}`} style={!formData.is_immunocompromised ? { background: '#F59E0B', color: 'white', borderColor: '#F59E0B' } : {}}>No</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
           <div className="card">
             <label className="block text-sm font-semibold mb-3" style={{ color: '#0F172A' }}>How long have you had fever?</label>
@@ -161,6 +244,9 @@ export default function Questionnaire() {
           </div>
 
           {SYMPTOMS.map((sym, i) => {
+            const isInfant = formData.age !== '' && parseInt(formData.age) <= 3;
+            if (isInfant && sym.isSubjective) return null; // Skip subjective symptoms for infants
+
             const Icon = sym.icon;
             return (
               <motion.div
@@ -224,7 +310,7 @@ export default function Questionnaire() {
           </motion.div>
 
           <p className="text-xs" style={{ color: '#94A3B8' }}>
-            ℹ️ Only binary values (0/1) are sent to ML models. Severity scores (0-3) are stored separately for analytics.
+            ℹ️ We automatically filter out certain questions for young children that they cannot accurately report.
           </p>
         </motion.div>
       )}
