@@ -178,6 +178,7 @@ export default function HardwarePage() {
   const handleContinue = () => {
     let finalTempC = parseFloat(vitals.temperature);
     if (tempUnit === 'F') finalTempC = (finalTempC - 32) * 5 / 9;
+    finalTempC = parseFloat(finalTempC.toFixed(1));
     
     navigate('/analyzing', {
       state: {

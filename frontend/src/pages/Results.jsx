@@ -147,7 +147,7 @@ export default function Results() {
       {/* Section 4: Vital Signs Summary */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Temperature', value: vitals?.temperature_c, unit: '°C', icon: Thermometer, range: '36.1–37.2°C' },
+          { label: 'Temperature', value: vitals?.temperature_c ? Number(vitals.temperature_c).toFixed(1) : '—', unit: '°C', icon: Thermometer, range: '36.1–37.2°C' },
           { label: 'SpO2', value: vitals?.spo2, unit: '%', icon: Droplets, range: '95–100%' },
           { label: 'Heart Rate', value: vitals?.heart_rate, unit: 'bpm', icon: Heart, range: '60–100 bpm' },
           { label: 'Humidity', value: vitals?.humidity, unit: '%', icon: Wind, range: '30–60%' },

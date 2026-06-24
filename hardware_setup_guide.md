@@ -43,7 +43,7 @@ Copy and paste the following code into your Arduino IDE.
 #include <Wire.h>
 #include <Adafruit_MLX90614.h>
 #include "MAX30105.h"
-#include "heartRate.h"
+#include "spo2_algorithm.h"
 
 // ==========================================
 // CONFIGURATION - CHANGE THESE!
@@ -61,13 +61,16 @@ const char* backend_url = "http://192.168.1.100:8000/sensors/update";
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 MAX30105 particleSensor;
 
-const byte RATE_SIZE = 4;
-byte rates[RATE_SIZE]; 
-byte rateSpot = 0;
-long lastBeat = 0; 
-float beatsPerMinute = 0;
-int beatAvg = 0;
-int spo2 = 98; // Simulated SpO2 calculation for simplicity, MAX30102 needs intense math for real SpO2
+// SpO2 calculation variables
+uint32_t irBuffer[100]; // infrared LED sensor data
+uint32_t redBuffer[100];  // red LED sensor data
+int32_t bufferLength = 100; // data length
+int32_t spo2; // SPO2 value
+int8_t validSPO2; // indicator to show if the SPO2 calculation is valid
+int32_t heartRate; // heart rate value
+int8_t validHeartRate; // indicator to show if the heart rate calculation is valid
+
+bool initialized = false;
 
 void setup() {
   Serial.begin(115200);
@@ -90,45 +93,75 @@ void setup() {
     Serial.println("MAX30102 was not found. Please check wiring/power.");
   }
 
-  particleSensor.setup();
-  particleSensor.setPulseAmplitudeRed(0x0A);
+  // Setup to sense up to 18 inches, max LED brightness
+  byte ledBrightness = 60; //Options: 0=Off to 255=50mA
+  byte sampleAverage = 4; //Options: 1, 2, 4, 8, 16, 32
+  byte ledMode = 2; //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+  byte sampleRate = 100; //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+  int pulseWidth = 411; //Options: 69, 118, 215, 411
+  int adcRange = 4096; //Options: 2048, 4096, 8192, 16384
+  
+  particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
 }
 
 void loop() {
-  // 1. Read Temperature
+  // Yield to ESP8266 background processes to prevent Watchdog Timer (WDT) reset
+  yield();
+  
+  if (!initialized) {
+    // Read the first 100 samples (approx 4 seconds) to populate the buffer
+    for (byte i = 0 ; i < bufferLength ; i++) {
+      while (particleSensor.available() == false) {
+        particleSensor.check(); 
+        yield();
+      }
+      redBuffer[i] = particleSensor.getRed();
+      irBuffer[i] = particleSensor.getIR();
+      particleSensor.nextSample();
+    }
+    // Calculate initial HR & SpO2
+    maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+    initialized = true;
+  }
+
+  // Once initialized, continuously update by shifting the buffer
+  // Dump the first 25 sets of samples and shift the last 75 to the top
+  for (byte i = 25; i < 100; i++) {
+    redBuffer[i - 25] = redBuffer[i];
+    irBuffer[i - 25] = irBuffer[i];
+  }
+
+  // Take 25 new samples (takes approx 1 second)
+  for (byte i = 75; i < 100; i++) {
+    while (particleSensor.available() == false) {
+      particleSensor.check();
+      yield();
+    }
+    redBuffer[i] = particleSensor.getRed();
+    irBuffer[i] = particleSensor.getIR();
+    particleSensor.nextSample();
+  }
+
+  // Recalculate HR and SpO2 based on the updated buffer
+  maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+
+  // Read Temperature
   float tempC = mlx.readObjectTempC();
 
-  // 2. Read Heart Rate
-  long irValue = particleSensor.getIR();
-  if (checkForBeat(irValue)) {
-    long delta = millis() - lastBeat;
-    lastBeat = millis();
-    beatsPerMinute = 60 / (delta / 1000.0);
-
-    if (beatsPerMinute < 255 && beatsPerMinute > 20) {
-      rates[rateSpot++] = (byte)beatsPerMinute;
-      rateSpot %= RATE_SIZE;
-      beatAvg = 0;
-      for (byte x = 0 ; x < RATE_SIZE ; x++) beatAvg += rates[x];
-      beatAvg /= RATE_SIZE;
-    }
+  // Validate readings and check if finger is present
+  int final_spo2 = 0;
+  int final_hr = 0;
+  
+  if (irBuffer[50] < 50000) {
+    Serial.println("No finger detected. Waiting...");
+  } else {
+    // Only use values if the algorithm flagged them as valid, and they fall into human limits
+    if (validSPO2 && spo2 >= 50 && spo2 <= 100) final_spo2 = spo2;
+    if (validHeartRate && heartRate >= 30 && heartRate <= 220) final_hr = heartRate;
   }
 
-  // 3. Send Data Every 2 Seconds
-  static unsigned long lastSend = 0;
-  if (millis() - lastSend > 2000) {
-    lastSend = millis();
-    
-    // Fallback if no finger detected
-    if (irValue < 50000) {
-      beatAvg = 0;
-      spo2 = 0;
-    } else {
-      spo2 = random(95, 100); // Using placeholder logic for SpO2 calculation
-    }
-
-    sendDataToServer(tempC, spo2, beatAvg);
-  }
+  // Send data to the backend
+  sendDataToServer(tempC, final_spo2, final_hr);
 }
 
 void sendDataToServer(float temp, int spo2_val, int hr) {
@@ -139,7 +172,7 @@ void sendDataToServer(float temp, int spo2_val, int hr) {
     
     String url = String(backend_url);
     if (url.startsWith("https")) {
-      clientSecure.setInsecure(); // Required to bypass strict SSL checks on the ESP8266
+      clientSecure.setInsecure(); // Bypass strict SSL checks for ESP8266
       http.begin(clientSecure, url);
     } else {
       http.begin(client, url);
@@ -147,7 +180,6 @@ void sendDataToServer(float temp, int spo2_val, int hr) {
     
     http.addHeader("Content-Type", "application/json");
 
-    // Construct JSON payload
     String payload = "{";
     payload += "\"temperature_c\":" + String(temp, 2) + ",";
     payload += "\"spo2\":" + String(spo2_val) + ",";

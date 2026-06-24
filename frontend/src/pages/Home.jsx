@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Thermometer, Droplets, Heart, Shield, ArrowRight, Bell, Plus } from 'lucide-react';
+import { Activity, Thermometer, Droplets, Heart, Shield, ArrowRight, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,15 +37,12 @@ export default function Home() {
           <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>{getGreeting()}</h1>
           <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>Here is your health summary</p>
         </div>
-        <button className="relative p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
-          <Bell size={20} color="#64748B" />
-        </button>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Temperature', value: latestScan?.temperature_c || '—', unit: '°C', icon: Thermometer, color: '#064E3B' },
+          { label: 'Temperature', value: latestScan?.temperature_c ? Number(latestScan.temperature_c).toFixed(1) : '—', unit: '°C', icon: Thermometer, color: '#064E3B' },
           { label: 'SpO2', value: latestScan?.spo2 || '—', unit: '%', icon: Droplets, color: '#0EA5E9' },
           { label: 'Heart Rate', value: latestScan?.heart_rate || '—', unit: 'bpm', icon: Heart, color: '#D97706' },
           { label: 'Risk Level', value: latestScan?.risk_level || '—', unit: '', icon: Shield, color: '#16A34A' },

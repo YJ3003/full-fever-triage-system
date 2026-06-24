@@ -8,15 +8,42 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const checkPendingScans = async (currentUser) => {
+      if (!currentUser) return;
+      const pendingStr = localStorage.getItem('pending_guest_scan');
+      if (pendingStr) {
+        try {
+          const pendingScan = JSON.parse(pendingStr);
+          // Remove immediately to prevent race conditions from multiple auth events
+          localStorage.removeItem('pending_guest_scan');
+          const { error } = await supabase.from('scans').insert([{
+            ...pendingScan,
+            user_id: currentUser.id,
+          }]);
+          if (error) {
+            // Restore if there was an error
+            localStorage.setItem('pending_guest_scan', pendingStr);
+            console.error('Supabase error syncing scan:', error);
+          }
+        } catch (err) {
+          console.error('Failed to sync pending scan:', err);
+        }
+      }
+    };
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
       setLoading(false);
+      checkPendingScans(currentUser);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      checkPendingScans(currentUser);
     });
 
     return () => subscription.unsubscribe();
@@ -37,12 +64,22 @@ export function AuthProvider({ children }) {
   };
 
   const saveScane = async (scanData) => {
-    if (!user) return null;
-    const { data, error } = await supabase.from('scans').insert([{
-      user_id: user.id,
+    const scanPayload = {
       ...scanData,
       created_at: new Date().toISOString(),
+    };
+
+    if (!user) {
+      // Save locally to sync later when they log in
+      localStorage.setItem('pending_guest_scan', JSON.stringify(scanPayload));
+      return null;
+    }
+
+    const { data, error } = await supabase.from('scans').insert([{
+      user_id: user.id,
+      ...scanPayload,
     }]).select().single();
+    
     if (error) { console.error('Scan save error:', error); return null; }
     return data;
   };

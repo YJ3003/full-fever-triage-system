@@ -42,6 +42,29 @@ export default function TrendsPage() {
     load();
   }, [user]);
 
+  const handleViewScan = (scan) => {
+    let rawResult = {};
+    let symptoms = {};
+    try { rawResult = JSON.parse(scan.raw_result || '{}'); } catch(e){}
+    try { symptoms = JSON.parse(scan.symptoms || '{}'); } catch(e){}
+    
+    navigate('/results', { 
+      state: { 
+        result: Object.keys(rawResult).length > 0 ? rawResult : { risk_level: scan.risk_level, infection_pattern: scan.infection_pattern, ai_explanation: scan.ai_explanation, recommendation: scan.recommendation }, 
+        vitals: { 
+          temperature_c: scan.temperature_c, 
+          spo2: scan.spo2, 
+          heart_rate: scan.heart_rate, 
+          humidity: scan.humidity 
+        }, 
+        questionnaire: { 
+          symptoms: symptoms,
+          travel_history: scan.travel_history || 0
+        } 
+      } 
+    });
+  };
+
   const analyzeFeverCurve = (allScans) => {
     const validScans = allScans.filter(s => s.temperature_c).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     if (validScans.length < 3) return { type: 'Insufficient Data', desc: 'Need at least 3 scans to determine pattern.', color: '#94A3B8' };
@@ -156,28 +179,7 @@ export default function TrendsPage() {
               </p>
               <button 
                 className="btn-primary w-full py-2 text-sm" 
-                onClick={() => {
-                  let rawResult = {};
-                  let symptoms = {};
-                  try { rawResult = JSON.parse(scans[scans.length - 1].raw_result || '{}'); } catch(e){}
-                  try { symptoms = JSON.parse(scans[scans.length - 1].symptoms || '{}'); } catch(e){}
-                  
-                  navigate('/results', { 
-                    state: { 
-                      result: Object.keys(rawResult).length > 0 ? rawResult : { risk_level: scans[scans.length - 1].risk_level, infection_pattern: scans[scans.length - 1].infection_pattern, ai_explanation: scans[scans.length - 1].ai_explanation, recommendation: scans[scans.length - 1].recommendation }, 
-                      vitals: { 
-                        temperature_c: scans[scans.length - 1].temperature_c, 
-                        spo2: scans[scans.length - 1].spo2, 
-                        heart_rate: scans[scans.length - 1].heart_rate, 
-                        humidity: scans[scans.length - 1].humidity 
-                      }, 
-                      questionnaire: { 
-                        symptoms: symptoms,
-                        travel_history: scans[scans.length - 1].travel_history || 0
-                      } 
-                    } 
-                  });
-                }}
+                onClick={() => handleViewScan(scans[scans.length - 1])}
               >
                 View Full Detailed Report
               </button>
@@ -260,7 +262,12 @@ export default function TrendsPage() {
             <h3 className="font-bold mb-4" style={{ color: '#0F172A' }}>Recent Scans</h3>
             <div className="space-y-3">
               {[...scans].reverse().slice(0, 10).map((scan, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: '#F1F5F9' }}>
+                <div 
+                  key={i} 
+                  onClick={() => handleViewScan(scan)}
+                  className="flex items-center justify-between p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors" 
+                  style={{ borderColor: '#F1F5F9' }}
+                >
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#0F172A' }}>
                       {scan.infection_pattern || 'Unknown'}
