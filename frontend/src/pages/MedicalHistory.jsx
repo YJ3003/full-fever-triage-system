@@ -82,7 +82,7 @@ export default function MedicalHistory() {
         </button>
         <div>
           <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>Medical History</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>Step 1 of 4 · This helps us understand the patient's health background</p>
+          <p className="text-sm" style={{ color: '#64748B' }}>Step 1 of 4 · This helps us understand the patient's health background (All questions are optional)</p>
         </div>
       </div>
 

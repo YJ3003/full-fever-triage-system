@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Auth from './pages/Auth';
 import MedicalHistory from './pages/MedicalHistory';
 import Questionnaire from './pages/Questionnaire';
+import Symptoms from './pages/Symptoms';
 import HardwarePage from './pages/HardwarePage';
 import AnalyzingPage from './pages/AnalyzingPage';
 import Results from './pages/Results';
@@ -81,6 +82,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/scan/medical-history" element={<MedicalHistory />} />
               <Route path="/scan/questionnaire" element={<Questionnaire />} />
+              <Route path="/scan/symptoms" element={<Symptoms />} />
               <Route path="/scan/hardware" element={<HardwarePage />} />
               <Route path="/analyzing" element={<AnalyzingPage />} />
               <Route path="/results" element={<Results />} />

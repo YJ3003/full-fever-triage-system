@@ -66,6 +66,7 @@ export default function HardwarePage() {
 
   const [activeTab, setActiveTab] = useState('manual'); // 'fetch' | 'manual'
   const [fetchStatus, setFetchStatus] = useState('idle'); // idle | connecting | success | error
+  const [loadingMessage, setLoadingMessage] = useState('Connecting to device...');
   const [tempUnit, setTempUnit] = useState('C');
   const [vitals, setVitals] = useState({
     temperature: '',
@@ -156,11 +157,39 @@ export default function HardwarePage() {
 
   const handleFetch = async () => {
     setFetchStatus('connecting');
+    setLoadingMessage('Connecting to NIDAN-AI device...');
+    
+    const msgs = [
+      "Calibrating IR & Red sensors...",
+      "Please place your finger gently on the sensor...",
+      "Please keep your hand still...",
+      "Reading SpO2 and Heart Rate...",
+      "Analyzing body temperature...",
+      "Finalizing vitals..."
+    ];
+    let step = 0;
+    const msgInterval = setInterval(() => {
+      if (step < msgs.length) {
+        setLoadingMessage(msgs[step]);
+        step++;
+      }
+    }, 1000);
+
+    // Enforce minimum 4.5 seconds delay for engagement
+    const minWait = new Promise(resolve => setTimeout(resolve, 4500));
+
     try {
       const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${BACKEND_URL}/sensors/latest`, { signal: AbortSignal.timeout(8000) });
-      if (!response.ok) throw new Error('Data stale or device not connected');
-      const data = await response.json();
+      const fetchPromise = fetch(`${BACKEND_URL}/sensors/latest`, { signal: AbortSignal.timeout(8000) })
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Data stale or device not connected');
+          return response.json();
+        });
+
+      // Wait for both the artificial delay and the actual fetch
+      const [data] = await Promise.all([fetchPromise, minWait]);
+      
+      clearInterval(msgInterval);
       setTempUnit('C');
       setVitals(v => ({
         ...v,
@@ -170,6 +199,7 @@ export default function HardwarePage() {
       }));
       setFetchStatus('success');
     } catch {
+      clearInterval(msgInterval);
       setFetchStatus('error');
       setTimeout(() => setActiveTab('manual'), 2000);
     }
@@ -208,12 +238,12 @@ export default function HardwarePage() {
   return (
     <div className="pb-8">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1, { state: { medicalHistory, questionnaire } })} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
+        <button onClick={() => navigate('/scan/symptoms', { state: { medicalHistory, questionnaire } })} className="p-2.5 bg-white rounded-xl shadow-sm border" style={{ borderColor: '#E2E8F0' }}>
           <ArrowLeft size={18} color="#64748B" />
         </button>
         <div>
           <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>Physiological Data</h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>Step 3 of 4 · Collect your vital signs</p>
+          <p className="text-sm" style={{ color: '#64748B' }}>Step 4 of 4 · Collect your vital signs</p>
         </div>
       </div>
 
@@ -244,7 +274,7 @@ export default function HardwarePage() {
       )}
 
       <div className="step-progress mb-8">
-        <div className="step-progress-fill" style={{ width: '75%' }} />
+        <div className="step-progress-fill" style={{ width: '100%' }} />
       </div>
 
       {/* Tab Switcher */}
@@ -282,7 +312,7 @@ export default function HardwarePage() {
           {fetchStatus === 'connecting' && (
             <div className="card text-center py-10">
               <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" style={{ borderColor: '#E2E8F0', borderTopColor: '#064E3B' }} />
-              <p className="font-medium" style={{ color: '#0F172A' }}>Connecting to device...</p>
+              <p className="font-medium" style={{ color: '#0F172A' }}>{loadingMessage}</p>
             </div>
           )}
           {fetchStatus === 'success' && (
